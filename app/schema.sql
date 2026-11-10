@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS payin_submission (
   gps_lng        DECIMAL(10,7)   NULL,
   distance_m     INT             NULL        COMMENT 'ระยะห่างจากพิกัดร้าน (เมตร)',
   within_radius  TINYINT         NULL        COMMENT '1=อยู่ในรัศมีร้าน, 0=นอกรัศมี',
+  revision       INT             NOT NULL DEFAULT 1  COMMENT 'ครั้งที่แจ้ง (แจ้งซ้ำ=แก้ไข เพิ่มทีละ 1)',
+  superseded     TINYINT         NOT NULL DEFAULT 0  COMMENT '1=ถูกแทนด้วยรายการใหม่กว่า (ไม่ใช่ตัวล่าสุด)',
   status         VARCHAR(20)     NOT NULL DEFAULT 'submitted' COMMENT 'submitted/verified/need_info',
   verified_by    VARCHAR(60)     NULL        COMMENT 'ผู้ตรวจสอบ',
   verified_at    DATETIME        NULL,

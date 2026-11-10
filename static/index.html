@@ -354,6 +354,13 @@ $('submitBtn').onclick = async () => {
   if(isNaN(d)) return showSubmit('กรอกยอดเงินฝาก',true);
   if(isNaN(c)) return showSubmit('กรอก Cash Sales (จาก Day End)',true);
   if(!getChannel()) return showSubmit('เลือกช่องทางฝาก',true);
+  // เตือนถ้าสาขานี้แจ้งยอด "วันที่ยอดขาย" นี้ไปแล้ว (แจ้งซ้ำ = แก้ไข)
+  if($('bizDate').value){
+    try{
+      const ex=await api('/api/my-submission?biz_date='+encodeURIComponent($('bizDate').value));
+      if(ex.exists && !confirm(`⚠ สาขานี้แจ้งยอดวันที่ขายนี้ไปแล้ว\nยอด ${fmt(ex.deposit_total)} บาท · ${ex.depositor_name||'-'} · เมื่อ ${ex.at}\n\nยืนยัน "แจ้งซ้ำ/แก้ไข"? ระบบจะใช้ยอดใหม่นี้แทนอันเดิม`)) return;
+    }catch(e){}
+  }
   $('submitBtn').disabled=true; $('submitBtn').innerHTML='<span class="spin"></span> กำลังส่ง…';
   let note = $('note').value;
   const alt = ($('altAccount').value||'').trim();
@@ -374,7 +381,9 @@ $('submitBtn').onclick = async () => {
        localStorage.setItem('payin_depositor_phone',$('depositorPhone').value.trim()); }catch(e){}
   try{
     const r=await api('/api/submit',{method:'POST',body:fd});
-    showSubmit('✓ ส่งแล้ว #'+r.submission_id+' — สถานะรอตรวจสอบ · ส่วนต่าง '+fmt(r.diff)+' บาท',false);
+    const head = r.revision>1 ? ('✓ แก้ไขครั้งที่ '+r.revision+' (#'+r.submission_id+') — ใช้ยอดนี้แทนอันเดิม')
+                              : ('✓ ส่งแล้ว #'+r.submission_id+' — สถานะรอตรวจสอบ');
+    showSubmit(head+' · ส่วนต่าง '+fmt(r.diff)+' บาท',false);
     loadHistory();
   }catch(e){ showSubmit('ส่งไม่สำเร็จ: '+e.message,true); }
   finally{ $('submitBtn').disabled=false; $('submitBtn').textContent='ส่งแจ้งยอดฝาก'; }

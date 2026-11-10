@@ -10,6 +10,7 @@ OCR ด้วย Tesseract (local) + ตัว parse ฟิลด์เงิน
 import re
 import io
 import shutil
+import datetime as dt
 
 try:
     import pytesseract
@@ -130,20 +131,22 @@ def _amount_tiered(text, tiers):
 
 
 def _find_date(text):
-    """หา DATE แบบ dd/mm/yyyy หรือ dd/mm/yy -> คืน 'YYYY-MM-DD' (พยายามแปลง พ.ศ.->ค.ศ.)"""
-    m = re.search(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})", text)
-    if not m:
-        return None
-    d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
-    if y < 100:          # 69 -> 2569(พ.ศ.) ; เดาเป็น 2000+yy ของ ค.ศ. ไม่ได้ จึงลองทั้งคู่
-        y = 2500 + y if y >= 50 else 2600 + y  # พ.ศ. สองหลัก
-    if y > 2400:         # เป็น พ.ศ. -> แปลงเป็น ค.ศ.
-        y -= 543
-    try:
-        if 1 <= mo <= 12 and 1 <= d <= 31 and 2000 <= y <= 2100:
-            return f"{y:04d}-{mo:02d}-{d:02d}"
-    except Exception:
-        pass
+    """หา DATE แบบ dd/mm/yyyy หรือ dd/mm/yy -> คืน 'YYYY-MM-DD'
+    แปลง พ.ศ.->ค.ศ. และรับเฉพาะวันที่ใกล้ปัจจุบัน (กัน OCR อ่านปีเพี้ยนเป็น 2067 ฯลฯ)"""
+    today = dt.date.today()
+    lo, hi = today - dt.timedelta(days=120), today + dt.timedelta(days=7)
+    for m in re.finditer(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})", text):
+        d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        if y < 100:           # สองหลัก = พ.ศ. (เช่น 69 -> 2569)
+            y += 2500
+        if y > 2400:          # พ.ศ. -> ค.ศ.
+            y -= 543
+        try:
+            cand = dt.date(y, mo, d)
+        except ValueError:
+            continue
+        if lo <= cand <= hi:   # รับเฉพาะที่สมเหตุผล
+            return cand.isoformat()
     return None
 
 

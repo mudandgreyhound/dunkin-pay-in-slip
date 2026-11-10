@@ -173,18 +173,32 @@ async def submit(
     # snapshot บัญชีธนาคารของสาขา (Branch Master) เก็บติดไปกับรายการเพื่อลงบัญชี
     bank = db.get_branch_bank(shop_code) or {}
 
+    # ตรวจ case ซ้ำ: ถ้าสาขานี้แจ้งยอด "วันที่ยอดขาย" เดียวกันไว้แล้ว
+    # -> ถือว่าเป็นการแก้ไข/แจ้งซ้ำ: อันเก่า superseded, อันใหม่เป็น revision ถัดไป (ล่าสุดเป็นหลัก)
+    revision = 1
+    superseded_ids = []
+    if biz_date:
+        prev = db.query(
+            "SELECT id, revision FROM payin_submission WHERE shop_code=%s AND biz_date=%s AND superseded=0",
+            (shop_code, biz_date))
+        if prev:
+            revision = max(p["revision"] for p in prev) + 1
+            superseded_ids = [p["id"] for p in prev]
+            for pid in superseded_ids:
+                db.execute("UPDATE payin_submission SET superseded=1 WHERE id=%s", (pid,))
+
     # 1) insert submission
     sub_id = db.execute(
         """INSERT INTO payin_submission
            (shop_code, biz_date, deposit_date, cash_sales, deposit_total, diff, deposit_channel,
             ar_code, bank_name, bank_account, offset_account,
-            depositor_name, depositor_phone,
+            depositor_name, depositor_phone, revision, superseded,
             gps_lat, gps_lng, distance_m, within_radius, status, note, created_by)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'submitted',%s,%s)""",
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s,%s,%s,'submitted',%s,%s)""",
         (shop_code, biz_date or None, deposit_date or None, cash, dep, diff, deposit_channel or None,
          bank.get("ar_code"), bank.get("bank_name"), bank.get("bank_account"),
          bank.get("offset_account"),
-         depositor_name or None, depositor_phone or None,
+         depositor_name or None, depositor_phone or None, revision,
          lat_f, lng_f, loc["distance_m"], loc["within_radius"], note or None,
          "GD" + shop_code),
     )
@@ -223,10 +237,30 @@ async def submit(
         saved.append(kind)
 
     return {"ok": True, "submission_id": sub_id, "diff": diff,
-            "location": loc, "saved_images": saved}
+            "location": loc, "saved_images": saved,
+            "revision": revision, "superseded": len(superseded_ids)}
 
 
 # ---------------- ประวัติของร้าน ----------------
+
+@app.get("/api/my-submission")
+def my_submission(request: Request, biz_date: str):
+    """คืนรายการที่สาขานี้แจ้งไว้แล้วสำหรับ 'วันที่ยอดขาย' นี้ (ไว้เตือนก่อนแจ้งซ้ำ) หรือ null"""
+    shop_code = require_shop(request)
+    row = db.query_one(
+        """SELECT id, deposit_total, revision, created_at, depositor_name
+           FROM payin_submission
+           WHERE shop_code=%s AND biz_date=%s AND superseded=0
+           ORDER BY id DESC LIMIT 1""",
+        (shop_code, biz_date))
+    if not row:
+        return {"exists": False}
+    return {"exists": True,
+            "deposit_total": float(row["deposit_total"]) if row["deposit_total"] is not None else None,
+            "revision": row["revision"],
+            "depositor_name": row.get("depositor_name"),
+            "at": row["created_at"].isoformat(sep=" ", timespec="minutes") if row.get("created_at") else None}
+
 
 @app.get("/api/submissions")
 def submissions(request: Request, limit: int = 30):
@@ -313,7 +347,7 @@ def review_summary(request: Request, date: str = None):
                b.dm, b.bank_name, b.bank_account,
                sub.id, sub.deposit_total, sub.diff, sub.deposit_date, sub.biz_date,
                sub.deposit_channel, sub.depositor_name, sub.depositor_phone,
-               sub.status, sub.within_radius, sub.created_at,
+               sub.status, sub.within_radius, sub.created_at, sub.revision,
                di.cap AS dep_captured,
                sub.verified_by, sub.verified_at
         FROM (
@@ -354,6 +388,7 @@ def review_summary(request: Request, date: str = None):
             "category": cat,
             "within_radius": r.get("within_radius"),
             "verified_by": r.get("verified_by"),
+            "revision": r.get("revision"),
         })
     return {"ok": True, "date": biz_date, "counts": counts, "rows": out}
 
@@ -373,6 +408,20 @@ def review_detail(request: Request, sid: int):
         "SELECT id, kind, captured_at FROM payin_image WHERE submission_id=%s ORDER BY kind DESC", (sid,))
     dep_img = next((i for i in imgs if i["kind"] == "deposit"), None)
     s["captured_at"] = dep_img["captured_at"] if dep_img and dep_img.get("captured_at") else None
+    # ประวัติการแจ้งซ้ำ/แก้ไข (รายการอื่นของสาขา+วันที่ยอดขายเดียวกัน)
+    hist = []
+    if s.get("biz_date"):
+        hist = db.query(
+            """SELECT id, revision, deposit_total, created_at, depositor_name, superseded
+               FROM payin_submission
+               WHERE shop_code=%s AND biz_date=%s AND id<>%s
+               ORDER BY id DESC""",
+            (s["shop_code"], s["biz_date"], sid))
+    s["history"] = [{"id": h["id"], "revision": h["revision"],
+                     "deposit_total": float(h["deposit_total"]) if h["deposit_total"] is not None else None,
+                     "depositor_name": h.get("depositor_name"),
+                     "at": h["created_at"].isoformat(sep=" ", timespec="minutes") if h.get("created_at") else None}
+                    for h in hist]
     for k in ("biz_date", "deposit_date"):
         if s.get(k):
             s[k] = s[k].isoformat()
