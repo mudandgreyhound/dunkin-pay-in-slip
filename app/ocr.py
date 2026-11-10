@@ -119,6 +119,16 @@ def _amount_near(text, keywords):
     return best
 
 
+def _amount_tiered(text, tiers):
+    """ค้นหายอดตามลำดับความสำคัญของกลุ่มคำ: คืนผลจาก tier แรกที่เจอ
+    (ใช้ให้ 'เงินฝาก' มาก่อน 'เงินสด' ในใบ 7-11/ธนาคารที่มีทั้งคู่คนละยอด)"""
+    for kws in tiers:
+        hit = _amount_near(text, kws)
+        if hit:
+            return hit
+    return None
+
+
 def _find_date(text):
     """หา DATE แบบ dd/mm/yyyy หรือ dd/mm/yy -> คืน 'YYYY-MM-DD' (พยายามแปลง พ.ศ.->ค.ศ.)"""
     m = re.search(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})", text)
@@ -154,10 +164,12 @@ def parse_day_end(text):
 
 def parse_deposit(text):
     """ดึงยอดเงินฝากจากใบนำฝาก (ธนาคาร/CP AXTRA/เซเว่น/ฯลฯ)"""
-    # คำที่มักอยู่ติดยอดฝาก
-    hit = _amount_near(text, [
-        "ยอดรวม", "เงินสด", "จำนวนเงิน", "ยอดฝาก", "รวมเงิน",
-        "total", "amount", "deposit", "cash",
+    # ลำดับความสำคัญ: "เงินฝาก/ฝาก" ต้องมาก่อน "เงินสด"
+    # (ใบ 7-11/ธนาคารมี เงินฝาก + เงินสด(ที่ลูกค้าจ่าย) + เงินทอน คนละยอด — ต้องการ "เงินฝาก")
+    hit = _amount_tiered(text, [
+        ["ฝาก", "deposit"],                                    # เงินฝาก/ยอดฝาก/นำฝาก ← ยอดที่ต้องการ
+        ["ยอดรวม", "รวมเงิน", "จำนวนเงิน", "total", "amount"],  # ยอดรวม
+        ["เงินสด", "cash"],                                    # เงินสดลูกค้าจ่าย (เผื่อไม่มีบรรทัดฝาก)
     ])
     amount = hit[0] if hit else _best_money(text, decimals_only=True)
     # เดาช่องทาง
