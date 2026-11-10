@@ -54,24 +54,34 @@ def _line_amount(line):
     return max(alln) if alln else None
 
 
-def _best_money(text):
-    """ยอดเงินที่ดีที่สุดทั้งเอกสาร: เน้นเลขมีทศนิยมและไม่เกินเพดาน (กันเลข ID)"""
+def _best_money(text, decimals_only=False):
+    """ยอดเงินที่ดีที่สุดทั้งเอกสาร: เน้นเลขมีทศนิยมและไม่เกินเพดาน (กันเลข ID)
+    decimals_only=True: รับเฉพาะเลขมีทศนิยม (.xx) เท่านั้น ไม่งั้นคืน None
+    (ใช้กับใบนำฝาก — ถ้าอ่านไม่ชัดให้ผู้ใช้กรอกเอง ดีกว่าเดามั่วจาก noise)"""
     dec = _valid(_to_float(x) for x in _MONEY_DEC.findall(text))
     if dec:
         return max(dec)
+    if decimals_only:
+        return None
     alln = _valid(_to_float(x) for x in _MONEY.findall(text))
     return max(alln) if alln else None
 
 
 def _preprocess(img):
-    """ปรับรูปให้ OCR อ่านง่ายขึ้น: เทาสเกล + เพิ่มคอนทราสต์ + คมชัด"""
+    """ปรับรูปให้ OCR อ่านง่ายขึ้น: หมุนตาม EXIF + เทาสเกล + คอนทราสต์ + คมชัด"""
+    # สำคัญมาก: รูปจากมือถือมักมี EXIF orientation (ถ่ายแนวตั้ง/กลับหัว)
+    # PIL ไม่หมุนให้อัตโนมัติ -> Tesseract อ่านรูปตะแคง/กลับหัวเป็นขยะ
+    img = ImageOps.exif_transpose(img)
     g = ImageOps.grayscale(img)
     g = ImageOps.autocontrast(g)
-    # ขยายถ้ารูปเล็ก เพื่อให้ตัวอักษรใหญ่พอ
     w, h = g.size
-    if max(w, h) < 1600:
-        scale = 1600 / max(w, h)
-        g = g.resize((int(w * scale), int(h * scale)))
+    longest = max(w, h)
+    if longest < 1600:                 # เล็กไป -> ขยายให้ตัวอักษรใหญ่พอ
+        s = 1600 / longest
+        g = g.resize((int(w * s), int(h * s)))
+    elif longest > 2600:               # ใหญ่มาก -> ย่อ ลด noise + เร็วขึ้น
+        s = 2600 / longest
+        g = g.resize((int(w * s), int(h * s)))
     g = g.filter(ImageFilter.SHARPEN)
     return g
 
@@ -149,7 +159,7 @@ def parse_deposit(text):
         "ยอดรวม", "เงินสด", "จำนวนเงิน", "ยอดฝาก", "รวมเงิน",
         "total", "amount", "deposit", "cash",
     ])
-    amount = hit[0] if hit else _best_money(text)
+    amount = hit[0] if hit else _best_money(text, decimals_only=True)
     # เดาช่องทาง
     low = text.lower()
     channel = None
