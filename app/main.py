@@ -362,7 +362,8 @@ def _category(row):
 @app.get("/api/review/summary")
 def review_summary(request: Request, date: str = None):
     require_admin(request)
-    biz_date = date or dt.date.today().isoformat()
+    # หน้า "ตรวจสอบยอดฝากรายวัน" ยึดวันที่ฝาก (deposit_date); เผื่อว่างใช้ biz_date แทน
+    review_date = date or dt.date.today().isoformat()
     rows = db.query(
         """
         SELECT base.shop_code,
@@ -376,14 +377,14 @@ def review_summary(request: Request, date: str = None):
         FROM (
             SELECT shop_code FROM payin_branch_bank
             UNION
-            SELECT shop_code FROM payin_submission WHERE biz_date = %s
+            SELECT shop_code FROM payin_submission WHERE COALESCE(deposit_date, biz_date) = %s
         ) base
         LEFT JOIN payin_branch_bank b ON b.shop_code = base.shop_code
         LEFT JOIN dim_shop ds ON ds.shop_code = base.shop_code
         LEFT JOIN (
             SELECT t.* FROM payin_submission t
             JOIN (SELECT shop_code, MAX(id) mid FROM payin_submission
-                  WHERE biz_date = %s GROUP BY shop_code) m ON m.mid = t.id
+                  WHERE COALESCE(deposit_date, biz_date) = %s GROUP BY shop_code) m ON m.mid = t.id
         ) sub ON sub.shop_code = base.shop_code
         LEFT JOIN (
             SELECT submission_id, MAX(captured_at) cap FROM payin_image
@@ -391,7 +392,7 @@ def review_summary(request: Request, date: str = None):
         ) di ON di.submission_id = sub.id
         ORDER BY base.shop_code
         """,
-        (biz_date, biz_date),
+        (review_date, review_date),
     )
     counts = {"all": 0, "pending": 0, "verified": 0, "not_submitted": 0, "no_cash": 0, "need_info": 0}
     out = []
@@ -413,7 +414,7 @@ def review_summary(request: Request, date: str = None):
             "verified_by": r.get("verified_by"),
             "revision": r.get("revision"),
         })
-    return {"ok": True, "date": biz_date, "counts": counts, "rows": out}
+    return {"ok": True, "date": review_date, "counts": counts, "rows": out}
 
 
 @app.get("/api/review/detail/{sid}")
