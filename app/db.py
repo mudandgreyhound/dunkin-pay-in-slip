@@ -87,3 +87,21 @@ def get_branch_bank(shop_code):
            FROM payin_branch_bank WHERE shop_code=%s""",
         (shop_code,),
     )
+
+
+def list_bank_master():
+    """รายการบัญชีกลางทั้งหมด (fallback ให้เลือกเมื่อสาขาไม่มีบัญชีผูก)"""
+    return query(
+        """SELECT account_code, bank_group, bank_name, account_number, ledger_account
+           FROM payin_bank_master WHERE active=1
+           ORDER BY bank_group, sort_order, account_code""",
+    )
+
+
+def get_bank_master(account_code):
+    """บัญชีเดียวจาก Bank Master ตามรหัสบัญชี (account_code = offset_account)"""
+    return query_one(
+        """SELECT account_code, bank_group, bank_name, account_number, ledger_account
+           FROM payin_bank_master WHERE account_code=%s""",
+        (account_code,),
+    )

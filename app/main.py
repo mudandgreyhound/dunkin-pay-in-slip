@@ -125,6 +125,13 @@ def me(request: Request):
     }
 
 
+@app.get("/api/bank-master")
+def bank_master(request: Request):
+    """รายการบัญชีกลางทั้งหมด (ให้สาขาที่ไม่มีบัญชีผูกเลือกนำฝากแทน)"""
+    require_shop(request)
+    return {"ok": True, "accounts": db.list_bank_master()}
+
+
 # ---------------- OCR preview (ไม่บันทึก) ----------------
 
 @app.post("/api/ocr")
@@ -154,6 +161,7 @@ async def submit(
     deposit_channel: str = Form(None),
     depositor_name: str = Form(None),
     depositor_phone: str = Form(None),
+    bank_account_code: str = Form(None),
     biz_date: str = Form(None),
     deposit_date: str = Form(None),
     note: str = Form(None),
@@ -172,6 +180,21 @@ async def submit(
 
     # snapshot บัญชีธนาคารของสาขา (Branch Master) เก็บติดไปกับรายการเพื่อลงบัญชี
     bank = db.get_branch_bank(shop_code) or {}
+
+    # Bank Master: ถ้าพนักงานเลือกบัญชีเอง (สาขาไม่มีบัญชีผูก หรือกด "ใช้บัญชีอื่น")
+    # -> ใช้บัญชีที่เลือกแทน (override snapshot ให้ตรงกับที่นำฝากจริง)
+    code = (bank_account_code or "").strip()
+    if code:
+        bm = db.get_bank_master(code)
+        if bm:
+            bank = {
+                "ar_code": None,
+                "bank_name": bm.get("bank_group"),        # BBL/KBANK/SCB... (ให้เข้ากับ branch_bank)
+                "bank_account": bm.get("account_number"),
+                "offset_account": bm.get("account_code"),
+            }
+            note_tag = f"เลือกบัญชีเอง: {bm.get('bank_group') or ''} {bm.get('account_code')} {bm.get('account_number') or ''}".strip()
+            note = ((note + " | ") if note else "") + note_tag
 
     # ตรวจ case ซ้ำ: ถ้าสาขานี้แจ้งยอด "วันที่ยอดขาย" เดียวกันไว้แล้ว
     # -> ถือว่าเป็นการแก้ไข/แจ้งซ้ำ: อันเก่า superseded, อันใหม่เป็น revision ถัดไป (ล่าสุดเป็นหลัก)

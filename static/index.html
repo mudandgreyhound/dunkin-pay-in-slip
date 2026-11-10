@@ -33,7 +33,7 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:13px}
   label.fl{display:block;font-size:13px;font-weight:800;margin:0 0 6px}
   .sub{font-size:12px;color:var(--muted)}
-  input[type=text],input[type=password],input[type=tel],input[type=number],input[type=date],textarea{
+  input[type=text],input[type=password],input[type=tel],input[type=number],input[type=date],textarea,select{
     width:100%;padding:13px 12px;border:1px solid var(--line);border-radius:12px;font-size:16px;
     background:var(--field);color:var(--ink)}
   textarea{min-height:56px;resize:vertical}
@@ -158,7 +158,10 @@
       </div>
       <div class="sub" id="bankHint" style="margin-top:8px">บัญชีอื่นต้องรอบัญชีตรวจสอบ</div>
       <div id="altBox" class="hide" style="margin-top:10px">
-        <input id="altAccount" type="text" inputmode="numeric" placeholder="เลขบัญชีอื่นที่นำฝาก (รอตรวจสอบ)">
+        <label class="fl">เลือกบัญชีที่นำฝาก</label>
+        <select id="altAccount">
+          <option value="">— เลือกบัญชี —</option>
+        </select>
       </div>
     </div>
 
@@ -361,11 +364,16 @@ $('submitBtn').onclick = async () => {
       if(ex.exists && !confirm(`⚠ สาขานี้แจ้งยอดวันที่ขายนี้ไปแล้ว\nยอด ${fmt(ex.deposit_total)} บาท · ${ex.depositor_name||'-'} · เมื่อ ${ex.at}\n\nยืนยัน "แจ้งซ้ำ/แก้ไข"? ระบบจะใช้ยอดใหม่นี้แทนอันเดิม`)) return;
     }catch(e){}
   }
+  const altCode = ($('altAccount').value||'').trim();
+  // สาขาไม่มีบัญชีผูก -> ต้องเลือกบัญชีก่อน
+  if(!BANK_FIXED && !altCode){
+    showSubmit('โปรดเลือกบัญชีที่นำฝาก (บัญชีประจำสาขายังไม่มีในทะเบียน)',true);
+    $('altBox').classList.remove('hide'); $('altAccount').focus(); return;
+  }
   $('submitBtn').disabled=true; $('submitBtn').innerHTML='<span class="spin"></span> กำลังส่ง…';
-  let note = $('note').value;
-  const alt = ($('altAccount').value||'').trim();
-  if(alt) note = (note + ' | ฝากบัญชีอื่น: ' + alt).trim();
+  const note = $('note').value;
   const fd=new FormData();
+  if(altCode) fd.append('bank_account_code',altCode);
   if(dayEndFile) fd.append('day_end_file',dayEndFile);
   if(depositFile) fd.append('deposit_file',depositFile);
   fd.append('cash_sales',c); fd.append('deposit_total',d);
@@ -413,18 +421,38 @@ const BANKS={
   BBL:{th:'ธนาคารกรุงเทพ',color:'#1e4598',label:'BBL'},
   TTB:{th:'ธนาคารทหารไทยธนชาต',color:'#103b7e',label:'ttb'},
 };
+let BANK_FIXED=false;   // true = สาขามีบัญชีผูกแน่นอน
+async function loadBankMaster(){
+  try{
+    const r=await api('/api/bank-master');
+    const sel=$('altAccount');
+    (r.accounts||[]).forEach(a=>{
+      const o=document.createElement('option');
+      o.value=a.account_code;
+      o.textContent=`${a.bank_group||''} ${a.account_code} · ${a.account_number||''}`.trim();
+      sel.appendChild(o);
+    });
+  }catch(e){}
+}
 function renderBank(bank){
   if(bank && bank.bank_account){
+    BANK_FIXED=true;
     const meta=BANKS[bank.bank_name]||{th:bank.bank_name||'ธนาคาร',color:'#9a9a9a',label:(bank.bank_name||'?').slice(0,3)};
     $('bankLogo').style.background=meta.color; $('bankLogo').textContent=meta.label;
     $('bankTh').textContent=meta.th + (bank.ar_code?(' · '+bank.ar_code):'');
     $('bankAcct').textContent=bank.bank_account;
+    $('bankHint').textContent='บัญชีประจำสาขา';
+    $('altToggle').classList.remove('hide');
     if(!getChannel()) setChannel('bank');
   } else {
+    // สาขาไม่มีบัญชีผูก -> บังคับให้เลือกจาก Bank Master
+    BANK_FIXED=false;
     $('bankLogo').style.background='#b26a00'; $('bankLogo').textContent='?';
     $('bankTh').innerHTML='<span class="pill warn">ไม่พบบัญชีประจำสาขา</span>';
-    $('bankAcct').textContent='— โปรดใช้บัญชีอื่น —';
-    $('bankHint').textContent='สาขานี้ยังไม่มีในทะเบียนบัญชี (Branch Master)';
+    $('bankAcct').textContent='— เลือกบัญชีที่นำฝากด้านล่าง —';
+    $('bankHint').textContent='สาขานี้ยังไม่มีในทะเบียนบัญชี — โปรดเลือกบัญชีที่นำฝากจริง';
+    $('altToggle').classList.add('hide');       // ซ่อนปุ่ม toggle, เปิด dropdown ค้างไว้
+    $('altBox').classList.remove('hide');
   }
 }
 
@@ -436,6 +464,7 @@ async function boot(){
   const s=me.shop;
   $('shopCode').textContent=s.shop_code;
   $('shopName').textContent=s.shop_name;
+  await loadBankMaster();
   renderBank(me.bank);
   if(!me.ocr_available){ $('dayEndOcr').classList.remove('hide'); $('dayEndOcr').innerHTML='<span class="pill warn">OCR ยังไม่พร้อม</span> กรอกเลขเอง'; }
   const today=new Date().toISOString().slice(0,10);

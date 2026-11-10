@@ -60,6 +60,22 @@ CREATE TABLE IF NOT EXISTS payin_image (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   COMMENT='pay-in-slip: รูปใบเสร็จ/ใบนำฝาก + ผล OCR + พิกัด';
 
+-- 2.5) Bank Master: รายการบัญชีกลางทั้งหมด (โหลดจาก Bank Master.csv)
+--      ใช้เป็น fallback: สาขาที่ไม่มีบัญชีผูกใน payin_branch_bank ให้พนักงานเลือกบัญชีจากที่นี่
+CREATE TABLE IF NOT EXISTS payin_bank_master (
+  account_code   VARCHAR(30)  NOT NULL COMMENT 'รหัสบัญชี เช่น SA-SCB01 (= offset_account)',
+  bank_group     VARCHAR(30)  NULL     COMMENT 'กลุ่มธนาคาร BBL/KBANK/SCB/TTB/KTB',
+  bank_name      VARCHAR(120) NULL     COMMENT 'ชื่อธนาคาร/สาขาเต็ม',
+  account_number VARCHAR(40)  NULL     COMMENT 'เลขบัญชี',
+  ledger_account VARCHAR(30)  NULL     COMMENT 'Ledger/GL account',
+  sort_order     INT          NULL,
+  active         TINYINT      NOT NULL DEFAULT 1,
+  updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (account_code),
+  KEY idx_group (bank_group)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  COMMENT='pay-in-slip: รายการบัญชีกลางทั้งหมด (fallback ให้เลือกเมื่อสาขาไม่มีบัญชีผูก)';
+
 -- 3) Branch Master: บัญชีธนาคารที่แต่ละสาขาต้องนำฝาก (โหลดจาก Branch Master.csv)
 CREATE TABLE IF NOT EXISTS payin_branch_bank (
   shop_code      VARCHAR(20)  NOT NULL,
