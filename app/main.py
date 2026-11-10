@@ -114,11 +114,13 @@ def me(request: Request):
         return JSONResponse({"authenticated": False}, status_code=200)
     shop = db.get_shop(code)
     loc = db.get_shop_location(code)
+    bank = db.get_branch_bank(code)
     return {
         "authenticated": True,
         "shop": shop,
         "has_location": bool(loc and loc.get("lat") is not None),
         "radius_m": int(loc["radius_m"]) if loc else None,
+        "bank": bank,              # บัญชีที่สาขานี้ต้องนำฝาก (หรือ None ถ้าไม่มีใน Branch Master)
         "ocr_available": ocr.available(),
     }
 
@@ -165,13 +167,19 @@ async def submit(
 
     diff = round(dep - cash, 2) if (cash is not None and dep is not None) else None
 
+    # snapshot บัญชีธนาคารของสาขา (Branch Master) เก็บติดไปกับรายการเพื่อลงบัญชี
+    bank = db.get_branch_bank(shop_code) or {}
+
     # 1) insert submission
     sub_id = db.execute(
         """INSERT INTO payin_submission
            (shop_code, biz_date, cash_sales, deposit_total, diff, deposit_channel,
+            ar_code, bank_name, bank_account, offset_account,
             gps_lat, gps_lng, distance_m, within_radius, status, note, created_by)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'submitted',%s,%s)""",
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'submitted',%s,%s)""",
         (shop_code, biz_date or None, cash, dep, diff, deposit_channel or None,
+         bank.get("ar_code"), bank.get("bank_name"), bank.get("bank_account"),
+         bank.get("offset_account"),
          lat_f, lng_f, loc["distance_m"], loc["within_radius"], note or None,
          "GD" + shop_code),
     )

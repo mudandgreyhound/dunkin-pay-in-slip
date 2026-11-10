@@ -77,3 +77,13 @@ def get_shop_location(shop_code):
         "SELECT shop_code, lat, lng, radius_m FROM shop_location WHERE shop_code=%s",
         (shop_code,),
     )
+
+
+def get_branch_bank(shop_code):
+    """บัญชีธนาคารที่สาขานี้ต้องนำฝาก (Branch Master)"""
+    return query_one(
+        """SELECT shop_code, dm, ar_code, name_branch, transfer_type,
+                  bank_name, bank_account, offset_account
+           FROM payin_branch_bank WHERE shop_code=%s""",
+        (shop_code,),
+    )

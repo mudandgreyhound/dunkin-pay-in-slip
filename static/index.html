@@ -114,6 +114,7 @@
     <div class="card">
       <h2>2) ใบนำฝาก</h2>
       <div class="hint">ถ่ายใบนำฝาก (ธนาคาร / CP AXTRA / เซเว่น ฯลฯ) — ระบบจะอ่านยอดเงิน</div>
+      <div id="bankReminder" class="msg hide" style="background:var(--warnbg);color:var(--warn)"></div>
       <label for="depositInput" class="capture" id="depositCap">
         <div class="ico">🏧</div><div><b>ถ่าย / เลือกรูปใบนำฝาก</b></div>
         <small>แตะเพื่อเปิดกล้อง</small>
@@ -329,6 +330,19 @@ async function boot(){
     (me.ocr_available?'':' · <span class="pill warn">OCR ยังไม่พร้อม (กรอกเลขเอง)</span>');
   SHOP_HASLOC=me.has_location; SHOP_RADIUS=me.radius_m;
   if(!me.has_location){ $('locLine').innerHTML='📍 <span class="pill warn">ร้านนี้ยังไม่มีพิกัดอ้างอิง</span> (shop_location)'; }
+  // แสดงบัญชีที่ต้องนำฝาก (Branch Master)
+  const br=$('bankReminder');
+  if(me.bank && me.bank.bank_account){
+    const b=me.bank;
+    br.innerHTML=`🏦 ต้องฝากเข้า: <b>${b.bank_name} ${b.bank_account}</b>`+
+      (b.ar_code?` · <span style="opacity:.8">${b.ar_code}</span>`:'');
+    br.classList.remove('hide');
+    // เลือกช่องทาง = ธนาคาร ให้อัตโนมัติ (transfer type = Counter เข้าบัญชีธนาคาร)
+    if(!$('channel').value) $('channel').value='bank';
+  } else {
+    br.innerHTML='🏦 <span class="pill warn">ไม่พบบัญชีนำฝากของสาขานี้</span> (Branch Master)';
+    br.classList.remove('hide');
+  }
   $('bizDate').value = new Date().toISOString().slice(0,10);
   getGPS();
   loadHistory();

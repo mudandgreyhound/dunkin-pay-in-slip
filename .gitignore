@@ -16,6 +16,9 @@ __pycache__/
 repo.txt
 push_to_github.sh
 
+# ข้อมูล master ที่มีเลขบัญชีธนาคาร — ห้ามขึ้น git
+*.csv
+
 # เบ็ดเตล็ด
 *.log
 .DS_Store

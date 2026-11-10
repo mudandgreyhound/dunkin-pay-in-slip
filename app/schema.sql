@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS payin_submission (
   deposit_total  DECIMAL(12,2)   NULL        COMMENT 'ยอดรวมจากใบนำฝาก',
   diff           DECIMAL(12,2)   NULL        COMMENT 'deposit_total - cash_sales (บวก=เกิน ลบ=ขาด)',
   deposit_channel VARCHAR(40)    NULL        COMMENT 'ช่องทางฝาก: bank/cpaxtra/seven/...',
+  ar_code        VARCHAR(20)     NULL        COMMENT 'snapshot จาก payin_branch_bank ตอนส่ง',
+  bank_name      VARCHAR(30)     NULL        COMMENT 'ธนาคารที่ต้องนำฝาก (snapshot)',
+  bank_account   VARCHAR(40)     NULL        COMMENT 'เลขบัญชีที่ต้องนำฝาก (snapshot)',
+  offset_account VARCHAR(30)     NULL        COMMENT 'offset account สำหรับลงบัญชี (snapshot)',
   gps_lat        DECIMAL(10,7)   NULL,
   gps_lng        DECIMAL(10,7)   NULL,
   distance_m     INT             NULL        COMMENT 'ระยะห่างจากพิกัดร้าน (เมตร)',
@@ -47,3 +51,19 @@ CREATE TABLE IF NOT EXISTS payin_image (
   KEY idx_shop_kind (shop_code, kind)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   COMMENT='pay-in-slip: รูปใบเสร็จ/ใบนำฝาก + ผล OCR + พิกัด';
+
+-- 3) Branch Master: บัญชีธนาคารที่แต่ละสาขาต้องนำฝาก (โหลดจาก Branch Master.csv)
+CREATE TABLE IF NOT EXISTS payin_branch_bank (
+  shop_code      VARCHAR(20)  NOT NULL,
+  dm             VARCHAR(100) NULL,
+  ar_code        VARCHAR(20)  NULL        COMMENT 'รหัส AR (เช่น AR1100947)',
+  name_branch    VARCHAR(200) NULL,
+  transfer_type  VARCHAR(30)  NULL        COMMENT 'เช่น Counter',
+  bank_name      VARCHAR(30)  NULL        COMMENT 'BBL/KBANK/SCB/TTB',
+  bank_account   VARCHAR(40)  NULL,
+  offset_account VARCHAR(30)  NULL        COMMENT 'เช่น SA-SCB01',
+  updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (shop_code),
+  KEY idx_bank (bank_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  COMMENT='pay-in-slip: บัญชีธนาคารที่แต่ละสาขาต้องนำฝาก (Branch Master)';
