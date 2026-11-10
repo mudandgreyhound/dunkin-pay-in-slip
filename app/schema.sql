@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS payin_submission (
   bank_name      VARCHAR(30)     NULL        COMMENT 'ธนาคารที่ต้องนำฝาก (snapshot)',
   bank_account   VARCHAR(40)     NULL        COMMENT 'เลขบัญชีที่ต้องนำฝาก (snapshot)',
   offset_account VARCHAR(30)     NULL        COMMENT 'offset account สำหรับลงบัญชี (snapshot)',
+  depositor_name  VARCHAR(100)   NULL        COMMENT 'ชื่อผู้นำฝาก',
+  depositor_phone VARCHAR(30)    NULL        COMMENT 'เบอร์โทรผู้นำฝาก',
   gps_lat        DECIMAL(10,7)   NULL,
   gps_lng        DECIMAL(10,7)   NULL,
   distance_m     INT             NULL        COMMENT 'ระยะห่างจากพิกัดร้าน (เมตร)',
