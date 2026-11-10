@@ -260,6 +260,8 @@ async function api(path, opts={}){
   return j;
 }
 const fmt = n => (n==null||isNaN(n)) ? '—' : Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+function localDT(){ const d=new Date(), p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; }
 
 // ---------- channel radios ----------
 function getChannel(){ const c=document.querySelector('input[name=chan]:checked'); return c?c.value:''; }
@@ -367,7 +369,7 @@ $('submitBtn').onclick = async () => {
   fd.append('deposit_date',$('depositDate').value);
   fd.append('note',note);
   if(GPS){ fd.append('lat',GPS.lat); fd.append('lng',GPS.lng); fd.append('accuracy',GPS.accuracy); }
-  fd.append('captured_at',new Date().toISOString().slice(0,19).replace('T',' '));
+  fd.append('captured_at',localDT());
   try{ localStorage.setItem('payin_depositor_name',$('depositorName').value.trim());
        localStorage.setItem('payin_depositor_phone',$('depositorPhone').value.trim()); }catch(e){}
   try{

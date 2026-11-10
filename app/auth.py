@@ -51,3 +51,33 @@ def read_token(token):
         return data.get("shop_code")
     except (BadSignature, SignatureExpired):
         return None
+
+
+# ---------- ผู้ตรวจสอบ (admin) ----------
+ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+ADMIN_COOKIE = "payin_admin"
+_admin_serializer = URLSafeTimedSerializer(SECRET_KEY, salt="payin-admin")
+
+
+def authenticate_admin(username, password):
+    """คืน username ถ้าถูกต้อง, ไม่งั้น None"""
+    if not ADMIN_PASSWORD:
+        return None
+    if (username or "").strip() == ADMIN_USER and (password or "") == ADMIN_PASSWORD:
+        return ADMIN_USER
+    return None
+
+
+def make_admin_token(username):
+    return _admin_serializer.dumps({"u": username})
+
+
+def read_admin_token(token):
+    if not token:
+        return None
+    try:
+        data = _admin_serializer.loads(token, max_age=MAX_AGE)
+        return data.get("u")
+    except (BadSignature, SignatureExpired):
+        return None

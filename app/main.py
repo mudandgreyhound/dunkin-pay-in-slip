@@ -249,6 +249,179 @@ def submissions(request: Request, limit: int = 30):
     return {"ok": True, "shop_code": shop_code, "rows": rows}
 
 
+# ================= ผู้ตรวจสอบ (admin / back-office) =================
+
+def current_admin(request: Request):
+    return auth.read_admin_token(request.cookies.get(auth.ADMIN_COOKIE))
+
+
+def require_admin(request: Request):
+    u = current_admin(request)
+    if not u:
+        raise HTTPException(status_code=401, detail="ต้องเข้าสู่ระบบผู้ตรวจสอบ")
+    return u
+
+
+@app.post("/api/admin/login")
+async def admin_login(request: Request):
+    body = await request.json()
+    u = auth.authenticate_admin(body.get("username"), body.get("password"))
+    if not u:
+        raise HTTPException(status_code=401, detail="ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+    resp = JSONResponse({"ok": True, "user": u})
+    resp.set_cookie(auth.ADMIN_COOKIE, auth.make_admin_token(u),
+                    max_age=auth.MAX_AGE, httponly=True, samesite="lax",
+                    secure=os.getenv("COOKIE_SECURE", "1") == "1", path="/")
+    return resp
+
+
+@app.post("/api/admin/logout")
+def admin_logout():
+    resp = JSONResponse({"ok": True})
+    resp.delete_cookie(auth.ADMIN_COOKIE, path="/")
+    return resp
+
+
+@app.get("/api/admin/me")
+def admin_me(request: Request):
+    u = current_admin(request)
+    return {"authenticated": bool(u), "user": u}
+
+
+def _category(row):
+    """จัดสถานะรายการ: not_submitted / no_cash / verified / pending"""
+    if row.get("id") is None:
+        return "not_submitted"
+    if row.get("status") == "verified":
+        return "verified"
+    if row.get("status") == "need_info":
+        return "need_info"
+    dep = row.get("deposit_total")
+    if dep is not None and float(dep) == 0:
+        return "no_cash"
+    return "pending"
+
+
+@app.get("/api/review/summary")
+def review_summary(request: Request, date: str = None):
+    require_admin(request)
+    biz_date = date or dt.date.today().isoformat()
+    rows = db.query(
+        """
+        SELECT base.shop_code,
+               COALESCE(ds.shop_name, b.name_branch) AS shop_name,
+               b.dm, b.bank_name, b.bank_account,
+               sub.id, sub.deposit_total, sub.diff, sub.deposit_date, sub.biz_date,
+               sub.deposit_channel, sub.depositor_name, sub.depositor_phone,
+               sub.status, sub.within_radius, sub.created_at,
+               di.cap AS dep_captured,
+               sub.verified_by, sub.verified_at
+        FROM (
+            SELECT shop_code FROM payin_branch_bank
+            UNION
+            SELECT shop_code FROM payin_submission WHERE biz_date = %s
+        ) base
+        LEFT JOIN payin_branch_bank b ON b.shop_code = base.shop_code
+        LEFT JOIN dim_shop ds ON ds.shop_code = base.shop_code
+        LEFT JOIN (
+            SELECT t.* FROM payin_submission t
+            JOIN (SELECT shop_code, MAX(id) mid FROM payin_submission
+                  WHERE biz_date = %s GROUP BY shop_code) m ON m.mid = t.id
+        ) sub ON sub.shop_code = base.shop_code
+        LEFT JOIN (
+            SELECT submission_id, MAX(captured_at) cap FROM payin_image
+            WHERE kind = 'deposit' GROUP BY submission_id
+        ) di ON di.submission_id = sub.id
+        ORDER BY base.shop_code
+        """,
+        (biz_date, biz_date),
+    )
+    counts = {"all": 0, "pending": 0, "verified": 0, "not_submitted": 0, "no_cash": 0, "need_info": 0}
+    out = []
+    for r in rows:
+        cat = _category(r)
+        counts["all"] += 1
+        counts[cat] = counts.get(cat, 0) + 1
+        dep_dt = r.get("dep_captured") or r.get("created_at")
+        out.append({
+            "shop_code": r["shop_code"], "shop_name": r["shop_name"], "dm": r.get("dm"),
+            "bank_name": r.get("bank_name"), "bank_account": r.get("bank_account"),
+            "submission_id": r.get("id"),
+            "deposit_total": float(r["deposit_total"]) if r.get("deposit_total") is not None else None,
+            "deposit_dt": dep_dt.isoformat(sep=" ", timespec="minutes") if dep_dt else None,
+            "submit_dt": r["created_at"].isoformat(sep=" ", timespec="minutes") if r.get("created_at") else None,
+            "depositor_name": r.get("depositor_name"),
+            "category": cat,
+            "within_radius": r.get("within_radius"),
+            "verified_by": r.get("verified_by"),
+        })
+    return {"ok": True, "date": biz_date, "counts": counts, "rows": out}
+
+
+@app.get("/api/review/detail/{sid}")
+def review_detail(request: Request, sid: int):
+    require_admin(request)
+    s = db.query_one(
+        """SELECT s.*, COALESCE(ds.shop_name, bb.name_branch) AS shop_name
+           FROM payin_submission s
+           LEFT JOIN dim_shop ds ON ds.shop_code = s.shop_code
+           LEFT JOIN payin_branch_bank bb ON bb.shop_code = s.shop_code
+           WHERE s.id = %s""", (sid,))
+    if not s:
+        raise HTTPException(status_code=404, detail="ไม่พบรายการ")
+    imgs = db.query(
+        "SELECT id, kind, captured_at FROM payin_image WHERE submission_id=%s ORDER BY kind DESC", (sid,))
+    dep_img = next((i for i in imgs if i["kind"] == "deposit"), None)
+    s["captured_at"] = dep_img["captured_at"] if dep_img and dep_img.get("captured_at") else None
+    for k in ("biz_date", "deposit_date"):
+        if s.get(k):
+            s[k] = s[k].isoformat()
+    for k in ("created_at", "captured_at", "verified_at"):
+        if s.get(k):
+            s[k] = s[k].isoformat(sep=" ", timespec="minutes")
+    for n in ("cash_sales", "deposit_total", "diff", "gps_lat", "gps_lng"):
+        if s.get(n) is not None:
+            s[n] = float(s[n])
+    s["images"] = [{"id": i["id"], "kind": i["kind"],
+                    "captured_at": i["captured_at"].isoformat(sep=" ", timespec="minutes") if i.get("captured_at") else None}
+                   for i in imgs]
+    return {"ok": True, "submission": s}
+
+
+@app.post("/api/review/verify/{sid}")
+def review_verify(request: Request, sid: int):
+    admin = require_admin(request)
+    db.execute("UPDATE payin_submission SET status='verified', verified_by=%s, verified_at=NOW() WHERE id=%s",
+               (admin, sid))
+    return {"ok": True}
+
+
+@app.post("/api/review/request-info/{sid}")
+async def review_request_info(request: Request, sid: int):
+    require_admin(request)
+    body = await request.json()
+    note = (body.get("note") or "").strip() or None
+    db.execute("UPDATE payin_submission SET status='need_info', review_note=%s WHERE id=%s", (note, sid))
+    return {"ok": True}
+
+
+@app.get("/api/review/image/{image_id}")
+def review_image(request: Request, image_id: int):
+    require_admin(request)
+    img = db.query_one("SELECT file_path FROM payin_image WHERE id=%s", (image_id,))
+    if not img or not img.get("file_path") or not os.path.exists(img["file_path"]):
+        raise HTTPException(status_code=404, detail="ไม่พบไฟล์รูป")
+    return FileResponse(img["file_path"])
+
+
+@app.get("/review")
+def review_page():
+    path = os.path.join(STATIC, "review.html")
+    if os.path.exists(path):
+        return FileResponse(path)
+    raise HTTPException(status_code=404, detail="not found")
+
+
 # ---------------- หน้าเว็บ ----------------
 
 @app.get("/")

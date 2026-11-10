@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dunkin' ตรวจสอบยอดฝากรายวัน</title>
+<style>
+  :root{
+    --dd:#FF671F; --pink:#E31C79; --bg:#f6f2ee; --card:#fff; --line:#e9e4de;
+    --ink:#241f1a; --muted:#8a8178; --field:#fbfaf8; --sb:#fff;
+    --ok:#157a3a; --okbg:#e9f8ee; --bad:#c0392b; --badbg:#fdecec;
+    --warn:#b26a00; --warnbg:#fff4e2; --info:#1f6fb2; --infobg:#e8f2fb;
+    --soft:#fdf2ec;
+  }
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+    --bg:#14100c; --card:#1e1813; --line:#2d251e; --ink:#f0e9e1; --muted:#b2a699;
+    --field:#191410; --sb:#1a1510; --okbg:#13301f; --badbg:#3a1a19; --warnbg:#33260f;
+    --infobg:#122634; --soft:#2a1c13;
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);
+       -webkit-font-smoothing:antialiased}
+  .hide{display:none!important}.muted{color:var(--muted)}
+  .pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
+  .st-pending{background:var(--warnbg);color:var(--warn)}
+  .st-verified{background:var(--okbg);color:var(--ok)}
+  .st-no_cash{background:var(--okbg);color:var(--ok)}
+  .st-not_submitted{background:#eee;color:#888}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .st-not_submitted{background:#2a2620;color:#9a9488}}
+  .st-need_info{background:var(--infobg);color:var(--info)}
+  button{font-family:inherit}
+
+  /* ---- admin login ---- */
+  #loginView{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+  .lcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px;max-width:360px;width:100%}
+  .brand{color:var(--dd);font-weight:900;font-size:26px;letter-spacing:.5px}
+  input[type=text],input[type=password],input[type=date],input[type=search]{
+    width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:var(--field);color:var(--ink)}
+  label.fl{display:block;font-size:12px;font-weight:800;color:var(--muted);margin:12px 0 5px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:12px 16px;border:0;border-radius:11px;
+       font-size:15px;font-weight:800;color:#fff;background:var(--dd);cursor:pointer}
+  .btn.full{width:100%}.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+  .btn:disabled{opacity:.55}
+  .msg{padding:10px 12px;border-radius:10px;font-size:13px;margin-top:10px;font-weight:600}
+  .msg.err{background:var(--badbg);color:var(--bad)}.msg.ok{background:var(--okbg);color:var(--ok)}
+
+  /* ---- layout ---- */
+  .shell{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
+  .side{background:var(--sb);border-right:1px solid var(--line);padding:18px 14px}
+  .side .logo{font-weight:900;color:var(--dd);font-size:22px;margin-bottom:22px;padding-left:6px}
+  .nav a{display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:10px;color:var(--ink);
+       text-decoration:none;font-weight:700;font-size:14px;margin-bottom:4px}
+  .nav a.active{background:var(--soft);color:var(--dd)}
+  .side .logout{margin-top:18px}
+  .main{padding:20px 24px;min-width:0}
+  .top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  h1{font-size:24px;margin:0}
+  .sub{color:var(--muted);font-size:13px;margin-top:3px}
+  .datebar{display:flex;align-items:center;gap:8px}
+  .datebox{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);
+       border-radius:11px;padding:8px 14px;font-weight:800}
+  .datebox input{border:0;background:none;width:140px;font-weight:800;padding:0}
+  .navbtn{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:16px}
+
+  .content{display:grid;grid-template-columns:1fr 390px;gap:18px;margin-top:18px;align-items:start}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .tab{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:11px;border:1px solid var(--line);
+       background:var(--card);cursor:pointer;font-weight:800;font-size:14px}
+  .tab.on{border-color:var(--dd);color:var(--dd);background:var(--soft)}
+  .tab b{background:rgba(0,0,0,.06);border-radius:8px;padding:1px 8px;font-size:13px}
+  .tab.on b{background:var(--dd);color:#fff}
+  .filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{border:0;background:var(--card);padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer;color:var(--ink)}
+  .seg button.on{background:var(--dd);color:#fff}
+  .search{flex:1;min-width:160px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:11px 10px;border-bottom:1px solid var(--line);text-align:left}
+  th{color:var(--muted);font-weight:700;font-size:12px}
+  td.num,th.num{text-align:right}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--soft)}
+  tbody tr.sel{background:var(--soft);box-shadow:inset 3px 0 0 var(--dd)}
+  .code{font-weight:800}.bname{color:var(--muted);font-size:12px}
+
+  /* detail */
+  .d-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .d-title{font-size:19px;font-weight:800}
+  .d-amt{background:var(--soft);border-radius:12px;padding:14px;margin:12px 0}
+  .d-amt .lb{color:var(--muted);font-size:12px}
+  .d-amt .v{color:var(--dd);font-size:26px;font-weight:900}
+  .d-sec{font-weight:800;font-size:14px;margin:14px 0 8px}
+  .d-dates{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+  .d-dates .box{background:var(--soft);border-radius:10px;padding:10px}
+  .d-dates .lb{color:var(--muted);font-size:11px}.d-dates .v{font-weight:800;font-size:13px;margin-top:2px}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .kv .k{color:var(--muted)}.kv .v{font-weight:700;text-align:right}
+  .imgs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+  .imgcard{border:1px solid var(--line);border-radius:10px;overflow:hidden;text-decoration:none;color:var(--ink);display:block}
+  .imgcard img{width:100%;height:150px;object-fit:cover;background:var(--field);display:block}
+  .imgcard .cap{padding:7px 9px;font-size:11px;font-weight:700}
+  .acts{display:flex;gap:10px;margin-top:16px}
+  .acts .btn{flex:1}
+  .empty{color:var(--muted);text-align:center;padding:40px 10px}
+
+  @media (max-width:1000px){
+    .shell{grid-template-columns:1fr}
+    .side{display:flex;align-items:center;gap:14px;padding:12px 16px;border-right:0;border-bottom:1px solid var(--line)}
+    .side .logo{margin:0}.nav{display:flex;gap:6px}.nav a{margin:0;padding:8px 10px}.side .logout{margin:0 0 0 auto}
+    .content{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== ADMIN LOGIN ===== -->
+<div id="loginView">
+  <div class="lcard">
+    <div style="text-align:center;margin-bottom:6px"><span class="brand">DUNKIN'</span></div>
+    <div style="text-align:center;font-weight:800;margin-bottom:12px">ระบบตรวจสอบยอดฝาก</div>
+    <label class="fl">ชื่อผู้ใช้</label>
+    <input id="aUser" type="text" value="admin" autocomplete="username">
+    <label class="fl">รหัสผ่าน</label>
+    <input id="aPass" type="password" autocomplete="current-password" placeholder="รหัสผู้ตรวจสอบ">
+    <button id="aLogin" class="btn full" style="margin-top:16px">เข้าสู่ระบบ</button>
+    <div id="aMsg" class="msg err hide"></div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div id="app" class="shell hide">
+  <aside class="side">
+    <div class="logo">DUNKIN'</div>
+    <nav class="nav">
+      <a href="#" class="active">📋 ตรวจสอบรายวัน</a>
+      <a href="/" >🏧 หน้าร้าน (แจ้งฝาก)</a>
+    </nav>
+    <button id="aLogout" class="btn ghost logout">ออกจากระบบ</button>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>ตรวจสอบยอดฝากรายวัน</h1>
+        <div class="sub">ตรวจสอบการแจ้งยอดแยกตามสาขา · เวลาประเทศไทย (UTC+7)</div>
+      </div>
+      <div class="datebar">
+        <button class="navbtn" id="prevDay">‹</button>
+        <div class="datebox">📅 <span class="muted" style="font-size:12px">วันที่ยอดขาย</span>
+          <input id="bizDate" type="date"></div>
+        <button class="navbtn" id="nextDay">›</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- table side -->
+      <div class="panel">
+        <div class="tabs" id="tabs">
+          <div class="tab on" data-tab="all">ทั้งหมด <b id="c-all">0</b></div>
+          <div class="tab" data-tab="pending">รอตรวจสอบ <b id="c-pending">0</b></div>
+          <div class="tab" data-tab="verified">ตรวจสอบแล้ว <b id="c-verified">0</b></div>
+          <div class="tab" data-tab="not_submitted">ยังไม่แจ้ง <b id="c-not_submitted">0</b></div>
+        </div>
+        <div class="filters">
+          <div class="seg" id="timeSeg">
+            <button data-t="all" class="on">ทั้งหมด</button>
+            <button data-t="am">ก่อนเที่ยง</button>
+            <button data-t="pm">หลังเที่ยง</button>
+          </div>
+          <input id="search" class="search" type="search" placeholder="🔍 รหัส / ชื่อสาขา">
+        </div>
+        <div style="overflow:auto">
+          <table>
+            <thead><tr>
+              <th>สาขา</th><th class="num">ยอดฝาก</th><th>วัน-เวลาฝาก</th><th>เวลาส่ง</th><th>สถานะ</th>
+            </tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+          <div id="tableEmpty" class="empty hide">ไม่มีรายการ</div>
+        </div>
+      </div>
+
+      <!-- detail side -->
+      <div class="panel" id="detailPanel">
+        <div class="empty" id="detailEmpty">เลือกสาขาจากตารางเพื่อดูรายละเอียด</div>
+        <div id="detailBody" class="hide"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+async function api(path, opts={}){
+  const r=await fetch(path,{credentials:'same-origin',...opts});
+  let j={}; try{ j=await r.json(); }catch(e){}
+  if(!r.ok) throw new Error(j.detail||('HTTP '+r.status));
+  return j;
+}
+const fmt = n => (n==null||isNaN(n))?'—':Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const TH_MON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function thDate(iso){ if(!iso) return '—'; const d=new Date(iso.replace(' ','T')); return `${d.getDate()} ${TH_MON[d.getMonth()]} ${d.getFullYear()+543}`; }
+function thDateTime(s){ if(!s) return '—'; const [d,t]=s.split(' '); return thDate(d)+(t?(' · '+t):''); }
+function timeOf(s){ if(!s) return '—'; const p=s.split(' '); return p[1]||'—'; }
+
+const ST={pending:['รอตรวจสอบ','st-pending','🕑'],verified:['ตรวจสอบแล้ว','st-verified','✓'],
+  no_cash:['ไม่มีเงินสด','st-no_cash','📄'],not_submitted:['ยังไม่แจ้ง','st-not_submitted','📄'],
+  need_info:['ขอข้อมูลเพิ่ม','st-need_info','💬']};
+const TABMAP={all:null,pending:['pending','need_info'],verified:['verified','no_cash'],not_submitted:['not_submitted']};
+
+let DATA={rows:[],counts:{}}, curTab='all', curTime='all', selId=null;
+
+// ---------- login ----------
+$('aLogin').onclick=async()=>{
+  $('aMsg').classList.add('hide');
+  $('aLogin').disabled=true;
+  try{ await api('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({username:$('aUser').value.trim(),password:$('aPass').value})});
+    await startApp();
+  }catch(e){ const m=$('aMsg'); m.textContent=e.message; m.classList.remove('hide'); }
+  finally{ $('aLogin').disabled=false; }
+};
+$('aPass').addEventListener('keydown',e=>{if(e.key==='Enter')$('aLogin').click();});
+$('aLogout').onclick=async()=>{ await api('/api/admin/logout',{method:'POST'}); location.reload(); };
+
+// ---------- date nav ----------
+function shiftDay(n){ const d=new Date($('bizDate').value); d.setDate(d.getDate()+n); $('bizDate').value=d.toISOString().slice(0,10); load(); }
+$('prevDay').onclick=()=>shiftDay(-1); $('nextDay').onclick=()=>shiftDay(1);
+$('bizDate').onchange=load;
+
+// ---------- tabs / filters ----------
+$('tabs').onclick=e=>{ const t=e.target.closest('.tab'); if(!t)return;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on')); t.classList.add('on'); curTab=t.dataset.tab; render(); };
+$('timeSeg').onclick=e=>{ const b=e.target.closest('button'); if(!b)return;
+  $('timeSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); curTime=b.dataset.t; render(); };
+$('search').addEventListener('input',render);
+
+// ---------- load + render ----------
+async function load(){
+  const r=await api('/api/review/summary?date='+encodeURIComponent($('bizDate').value));
+  DATA=r;
+  const c=r.counts;
+  $('c-all').textContent=c.all||0;
+  $('c-pending').textContent=(c.pending||0)+(c.need_info||0);
+  $('c-verified').textContent=(c.verified||0)+(c.no_cash||0);
+  $('c-not_submitted').textContent=c.not_submitted||0;
+  render();
+}
+function passTime(row){
+  if(curTime==='all') return true;
+  if(!row.deposit_dt) return false;
+  const h=parseInt((row.deposit_dt.split(' ')[1]||'0:').split(':')[0],10);
+  return curTime==='am'? h<12 : h>=12;
+}
+function render(){
+  const q=$('search').value.trim().toLowerCase();
+  const cats=TABMAP[curTab];
+  let rows=DATA.rows.filter(r=>{
+    if(cats && !cats.includes(r.category)) return false;
+    if(!passTime(r)) return false;
+    if(q && !((r.shop_code||'').toLowerCase().includes(q)||(r.shop_name||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const tb=$('tbody'); tb.innerHTML='';
+  $('tableEmpty').classList.toggle('hide', rows.length>0);
+  for(const r of rows){
+    const st=ST[r.category]||ST.not_submitted;
+    const tr=document.createElement('tr');
+    if(r.submission_id===selId && selId!=null) tr.className='sel';
+    tr.innerHTML=`<td><span class="code">${r.shop_code}</span> <span class="bname">${r.shop_name||''}</span></td>`+
+      `<td class="num">${r.deposit_total==null?'—':fmt(r.deposit_total)}</td>`+
+      `<td>${thShort(r.deposit_dt)}</td>`+
+      `<td>${timeOf(r.submit_dt)}</td>`+
+      `<td><span class="pill ${st[1]}">${st[2]} ${st[0]}</span></td>`;
+    if(r.submission_id) tr.onclick=()=>openDetail(r.submission_id);
+    else tr.style.cursor='default';
+    tb.appendChild(tr);
+  }
+}
+function thShort(s){ if(!s) return '—'; const [d,t]=s.split(' '); const dd=new Date(d); return `${String(dd.getDate()).padStart(2,'0')}/${String(dd.getMonth()+1).padStart(2,'0')} ${t||''}`; }
+
+// ---------- detail ----------
+async function openDetail(sid){
+  selId=sid; render();
+  $('detailEmpty').classList.add('hide'); $('detailBody').classList.remove('hide');
+  $('detailBody').innerHTML='<div class="empty">กำลังโหลด…</div>';
+  try{
+    const r=await api('/api/review/detail/'+sid); const s=r.submission;
+    const st=ST[catOf(s)]||ST.pending;
+    const imgs=(s.images||[]).map(im=>{
+      const label=im.kind==='day_end'?'รายงานปิดวัน (Day End)':'หลักฐานฝาก (ใบนำฝาก)';
+      return `<a class="imgcard" href="/api/review/image/${im.id}" target="_blank">
+        <img src="/api/review/image/${im.id}" alt=""><div class="cap">${label}</div></a>`;
+    }).join('');
+    const bank = s.bank_name? `${s.bank_name} • ${s.bank_account||'—'}` : '—';
+    $('detailBody').innerHTML=`
+      <div class="d-head"><div class="d-title">${s.shop_code} · ${s.shop_name||''}</div>
+        <span class="pill ${st[1]}">${st[2]} ${st[0]}</span></div>
+      <div class="d-amt"><div class="lb">ยอดฝาก</div><div class="v">฿${fmt(s.deposit_total)}</div>
+        <div class="lb" style="margin-top:4px">Day End: ${fmt(s.cash_sales)} · ส่วนต่าง ${s.diff==null?'—':fmt(s.diff)}</div></div>
+      <div class="d-sec">รายละเอียดการฝาก</div>
+      <div class="d-dates">
+        <div class="box"><div class="lb">วันที่ยอดขาย</div><div class="v">${thDate(s.biz_date)}</div></div>
+        <div class="box"><div class="lb">วัน-เวลาฝาก</div><div class="v">${thDateTime(s.captured_at||s.deposit_date)}</div></div>
+      </div>
+      <div class="kv"><span class="k">ส่งรายการเมื่อ</span><span class="v">${thDateTime(s.created_at)}</span></div>
+      <div class="kv"><span class="k">ช่องทางฝาก</span><span class="v">${chanName(s.deposit_channel)}</span></div>
+      <div class="kv"><span class="k">บัญชีปลายทาง</span><span class="v">${bank}</span></div>
+      <div class="kv"><span class="k">อยู่ที่ร้าน</span><span class="v">${s.within_radius==1?'✓ ในรัศมี':(s.within_radius==0?'✗ นอกรัศมี ('+(s.distance_m||'?')+' m)':'—')}</span></div>
+      <div class="kv"><span class="k">ผู้ฝาก</span><span class="v">${s.depositor_name||'—'}</span></div>
+      <div class="kv"><span class="k">โทร</span><span class="v">${s.depositor_phone||'—'}</span></div>
+      ${s.note?`<div class="kv"><span class="k">หมายเหตุ</span><span class="v">${s.note}</span></div>`:''}
+      ${s.verified_by?`<div class="kv"><span class="k">ตรวจโดย</span><span class="v">${s.verified_by} · ${thDateTime(s.verified_at)}</span></div>`:''}
+      <div class="d-sec">หลักฐานการฝากและรายงานปิดวัน</div>
+      <div class="imgs">${imgs||'<div class="muted" style="grid-column:1/3">ไม่มีรูปแนบ</div>'}</div>
+      <div class="acts">
+        <button class="btn" id="btnVerify" ${s.status==='verified'?'disabled':''}>✓ ยืนยันตรวจสอบ</button>
+        <button class="btn ghost" id="btnInfo">💬 ขอข้อมูลเพิ่ม</button>
+      </div>`;
+    $('btnVerify').onclick=()=>doVerify(sid);
+    $('btnInfo').onclick=()=>doRequestInfo(sid);
+  }catch(e){ $('detailBody').innerHTML='<div class="empty">โหลดไม่ได้: '+e.message+'</div>'; }
+}
+function catOf(s){ if(s.status==='verified')return'verified'; if(s.status==='need_info')return'need_info';
+  if(s.deposit_total!=null && Number(s.deposit_total)===0)return'no_cash'; return'pending'; }
+function chanName(c){ return {seven:'7-Eleven',cpaxtra:"Lotus's",bank:'ธนาคาร',counter:'Counter Service',other:'อื่น ๆ'}[c]||c||'—'; }
+
+async function doVerify(sid){
+  if(!confirm('ยืนยันว่าตรวจสอบรายการนี้แล้ว?')) return;
+  await api('/api/review/verify/'+sid,{method:'POST'});
+  await load(); openDetail(sid);
+}
+async function doRequestInfo(sid){
+  const note=prompt('ขอข้อมูลเพิ่มเติม — ระบุสิ่งที่ต้องการ:'); if(note===null) return;
+  await api('/api/review/request-info/'+sid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note})});
+  await load(); openDetail(sid);
+}
+
+// ---------- boot ----------
+async function startApp(){
+  $('loginView').classList.add('hide'); $('app').classList.remove('hide');
+  $('bizDate').value=new Date().toISOString().slice(0,10);
+  await load();
+}
+(async()=>{
+  try{ const me=await api('/api/admin/me'); if(me.authenticated){ await startApp(); return; } }catch(e){}
+  $('loginView').classList.remove('hide');
+})();
+</script>
+</body>
+</html>
