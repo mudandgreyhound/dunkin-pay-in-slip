@@ -301,10 +301,30 @@ $('altToggle').onclick = () => {
   if(!b.classList.contains('hide')) $('altAccount').focus();
 };
 
+// ---------- resize รูปก่อนอัปโหลด (ลดขนาดไฟล์) ----------
+const MAX_EDGE=2000, JPEG_Q=0.82;
+async function resizeImage(file){
+  if(!file || !/^image\//.test(file.type)) return file;
+  try{
+    // imageOrientation:'from-image' = อบ EXIF orientation ลงพิกเซล (กันรูปตะแคง)
+    let bmp;
+    try{ bmp=await createImageBitmap(file,{imageOrientation:'from-image'}); }
+    catch(_){ bmp=await createImageBitmap(file); }
+    const scale=Math.min(1, MAX_EDGE/Math.max(bmp.width,bmp.height));
+    const w=Math.round(bmp.width*scale), h=Math.round(bmp.height*scale);
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+    cv.getContext('2d').drawImage(bmp,0,0,w,h); bmp.close&&bmp.close();
+    const blob=await new Promise(res=>cv.toBlob(res,'image/jpeg',JPEG_Q));
+    if(!blob || blob.size>=file.size) return file;   // ถ้าไม่เล็กลงใช้ไฟล์เดิม
+    return new File([blob], (file.name||'photo').replace(/\.[^.]+$/,'')+'.jpg', {type:'image/jpeg'});
+  }catch(e){ return file; }   // อะไรพลาด -> ส่งไฟล์เดิม (server มี exif_transpose รองรับ)
+}
+
 // ---------- OCR capture ----------
 function wireCapture(inputId, btnId, wrapId, thumbId, rmId, ocrId, kind){
   $(inputId).onchange = async (ev) => {
-    const file=ev.target.files[0]; if(!file) return;
+    const raw=ev.target.files[0]; if(!raw) return;
+    const file=await resizeImage(raw);
     if(kind==='day_end') dayEndFile=file; else depositFile=file;
     $(thumbId).src=URL.createObjectURL(file);
     $(wrapId).classList.remove('hide'); $(btnId).classList.add('done');
