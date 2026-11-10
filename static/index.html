@@ -353,7 +353,9 @@ $('submitBtn').onclick = async () => {
   if(isNaN(c)) return showSubmit('กรอก Cash Sales (จาก Day End)',true);
   if(!getChannel()) return showSubmit('เลือกช่องทางฝาก',true);
   $('submitBtn').disabled=true; $('submitBtn').innerHTML='<span class="spin"></span> กำลังส่ง…';
-  const note = ($('note').value + (($('altAccount').value||'').trim()?(' | ฝากบัญชีอื่น: '+$('altAccount').value.trim()):'')).trim());
+  let note = $('note').value;
+  const alt = ($('altAccount').value||'').trim();
+  if(alt) note = (note + ' | ฝากบัญชีอื่น: ' + alt).trim();
   const fd=new FormData();
   if(dayEndFile) fd.append('day_end_file',dayEndFile);
   if(depositFile) fd.append('deposit_file',depositFile);
