@@ -429,7 +429,7 @@ async function loadBankMaster(){
     (r.accounts||[]).forEach(a=>{
       const o=document.createElement('option');
       o.value=a.account_code;
-      o.textContent=`${a.bank_group||''} ${a.account_code} · ${a.account_number||''}`.trim();
+      o.textContent=`${a.bank_group||''} · ${a.account_number||''}`.trim();
       sel.appendChild(o);
     });
   }catch(e){}
