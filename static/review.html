@@ -175,7 +175,7 @@
         <div style="overflow:auto">
           <table>
             <thead><tr>
-              <th>สาขา</th><th class="num">ยอดฝาก</th><th>วัน-เวลาฝาก</th><th>เวลาส่ง</th><th>สถานะ</th>
+              <th>สาขา</th><th class="num">Day End</th><th class="num">ยอดฝาก</th><th class="num">ส่วนต่าง</th><th>วัน-เวลาฝาก</th><th>เวลาส่ง</th><th>สถานะ</th>
             </tr></thead>
             <tbody id="tbody"></tbody>
           </table>
@@ -270,8 +270,13 @@ function render(){
     const st=ST[r.category]||ST.not_submitted;
     const tr=document.createElement('tr');
     if(r.submission_id===selId && selId!=null) tr.className='sel';
+    const dz = (r.diff!=null && Number(r.diff)!==0);
+    const diffCell = r.diff==null ? '—'
+      : `<span style="color:${dz?(Number(r.diff)<0?'#c0392b':'#b26a00'):'var(--muted)'};font-weight:${dz?700:400}">${Number(r.diff)>0?'+':''}${fmt(r.diff)}</span>`;
     tr.innerHTML=`<td><span class="code">${r.shop_code}</span> <span class="bname">${r.shop_name||''}</span></td>`+
+      `<td class="num">${r.cash_sales==null?'—':fmt(r.cash_sales)}</td>`+
       `<td class="num">${r.deposit_total==null?'—':fmt(r.deposit_total)}</td>`+
+      `<td class="num">${diffCell}</td>`+
       `<td>${thShort(r.deposit_dt)}</td>`+
       `<td>${timeOf(r.submit_dt)}</td>`+
       `<td><span class="pill ${st[1]}">${st[2]} ${st[0]}</span>${r.revision>1?` <span class="pill st-need_info" title="แจ้งซ้ำ/แก้ไข">✎${r.revision}</span>`:''}</td>`;
