@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pymysql
+python-dotenv
+itsdangerous
+pillow
+pytesseract

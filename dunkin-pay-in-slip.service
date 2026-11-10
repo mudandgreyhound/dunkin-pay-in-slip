@@ -1,0 +1,15 @@
+[Unit]
+Description=Dunkin' Pay-in Slip (FastAPI, test project)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu1
+WorkingDirectory=/opt/dunkin-pay-in-slip
+EnvironmentFile=-/opt/dunkin-pay-in-slip/.env
+ExecStart=/opt/dunkin-pay-in-slip/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8608
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

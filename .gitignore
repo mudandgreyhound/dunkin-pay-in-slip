@@ -1,0 +1,17 @@
+# ความลับ — ห้ามขึ้น GitHub เด็ดขาด (มีรหัส DB + SECRET_KEY)
+.env
+
+# virtualenv
+venv/
+
+# รูปที่ผู้ใช้อัปโหลด
+data/
+
+# python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# เบ็ดเตล็ด
+*.log
+.DS_Store

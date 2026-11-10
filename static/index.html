@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Dunkin' Pay-in Slip</title>
+<style>
+  :root{
+    --dd:#FF671F; --pink:#E31C79; --bg:#faf7f3; --card:#fff; --line:#eceae6;
+    --ink:#2a241e; --muted:#8a8178; --ok:#157a3a; --okbg:#e9f8ee;
+    --bad:#c0392b; --badbg:#fdecec; --warn:#b26a00; --warnbg:#fff4e2;
+  }
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+    --bg:#17130f; --card:#201a15; --line:#2e261f; --ink:#f0e9e1; --muted:#b8aca0;
+    --okbg:#13301f; --badbg:#3a1a19; --warnbg:#33260f;
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);
+       -webkit-font-smoothing:antialiased;min-height:100vh}
+  header{background:linear-gradient(90deg,var(--dd),var(--pink));color:#fff;padding:14px 16px;
+         display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+  header .brand{font-weight:800;font-size:18px;letter-spacing:.5px}
+  header .brand small{font-weight:700;opacity:.85;font-size:11px;letter-spacing:1.5px;display:block}
+  header button{background:rgba(255,255,255,.2);color:#fff;border:0;border-radius:8px;
+                padding:7px 12px;font-weight:700;font-size:13px}
+  .wrap{max-width:480px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+  h2{margin:0 0 4px;font-size:16px}
+  .hint{color:var(--muted);font-size:12px;line-height:1.5}
+  label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:12px 0 5px}
+  input[type=text],input[type=password],input[type=date],input[type=number],textarea,select{
+    width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px;
+    background:var(--bg);color:var(--ink)}
+  textarea{min-height:60px;resize:vertical}
+  .btn{display:block;width:100%;padding:14px;border:0;border-radius:12px;font-size:16px;font-weight:800;
+       color:#fff;background:var(--dd);margin-top:14px}
+  .btn:disabled{opacity:.5}
+  .btn.ghost{background:var(--card);color:var(--dd);border:2px solid var(--dd)}
+  .capture{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px;border:2px dashed var(--line);
+           border-radius:12px;text-align:center;cursor:pointer}
+  .capture.done{border-style:solid;border-color:var(--ok)}
+  .capture .ico{font-size:30px}
+  .capture small{color:var(--muted);font-size:12px}
+  .thumb{width:100%;max-height:200px;object-fit:contain;border-radius:10px;margin-top:8px;background:#0001}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800}
+  .pill.ok{background:var(--okbg);color:var(--ok)} .pill.bad{background:var(--badbg);color:var(--bad)}
+  .pill.warn{background:var(--warnbg);color:var(--warn)}
+  .row{display:flex;gap:10px} .row>*{flex:1}
+  .big{font-size:22px;font-weight:800}
+  .diff{text-align:center;padding:12px;border-radius:12px;margin-top:6px;font-weight:800}
+  .msg{padding:10px 12px;border-radius:10px;font-size:13px;margin-top:10px;font-weight:600}
+  .msg.err{background:var(--badbg);color:var(--bad)} .msg.ok{background:var(--okbg);color:var(--ok)}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid #fff6;border-top-color:#fff;
+        border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .hide{display:none!important}
+  .loc{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- ======= LOGIN ======= -->
+<div id="loginView" class="wrap" style="padding-top:36px">
+  <div style="text-align:center;margin-bottom:18px">
+    <div style="color:var(--dd);font-weight:800;font-size:30px;letter-spacing:.5px">DUNKIN'</div>
+    <div style="color:var(--muted);font-size:12px;font-weight:700;letter-spacing:2.5px">PAY-IN SLIP</div>
+  </div>
+  <div class="card">
+    <h2>เข้าสู่ระบบ</h2>
+    <div class="hint">ใช้รหัสร้าน — Username: <b>GD</b> ตามด้วยรหัสร้าน · Password: รหัสร้าน</div>
+    <label>Username</label>
+    <input id="username" type="text" inputmode="text" autocapitalize="characters" placeholder="เช่น GD0143" autocomplete="username">
+    <label>Password</label>
+    <input id="password" type="password" inputmode="numeric" placeholder="เช่น 0143" autocomplete="current-password">
+    <button id="loginBtn" class="btn">เข้าสู่ระบบ</button>
+    <div id="loginMsg" class="msg err hide"></div>
+  </div>
+</div>
+
+<!-- ======= APP ======= -->
+<div id="appView" class="hide">
+  <header>
+    <div class="brand">DUNKIN' <small>PAY-IN SLIP</small></div>
+    <button id="logoutBtn">ออก</button>
+  </header>
+  <div class="wrap">
+
+    <div class="card" id="shopCard">
+      <h2 id="shopName">—</h2>
+      <div class="hint" id="shopMeta">—</div>
+      <div class="loc" id="locLine">📍 กำลังหาตำแหน่ง…</div>
+    </div>
+
+    <!-- Day End -->
+    <div class="card">
+      <h2>1) Day End Report</h2>
+      <div class="hint">ถ่ายรูปใบ Day End — ระบบจะอ่าน <b>Cash Sales</b> (เงินสดที่ต้องนำฝาก)</div>
+      <label for="dayEndInput" class="capture" id="dayEndCap">
+        <div class="ico">🧾</div><div><b>ถ่าย / เลือกรูป Day End</b></div>
+        <small>แตะเพื่อเปิดกล้อง</small>
+      </label>
+      <input id="dayEndInput" type="file" accept="image/*" capture="environment" class="hide">
+      <img id="dayEndThumb" class="thumb hide" alt="">
+      <div id="dayEndOcr" class="hint hide" style="margin-top:6px"></div>
+      <label>Cash Sales — เงินสดที่ต้องนำฝาก (บาท)</label>
+      <input id="cashSales" type="number" inputmode="decimal" step="0.01" placeholder="0.00">
+    </div>
+
+    <!-- Deposit -->
+    <div class="card">
+      <h2>2) ใบนำฝาก</h2>
+      <div class="hint">ถ่ายใบนำฝาก (ธนาคาร / CP AXTRA / เซเว่น ฯลฯ) — ระบบจะอ่านยอดเงิน</div>
+      <label for="depositInput" class="capture" id="depositCap">
+        <div class="ico">🏧</div><div><b>ถ่าย / เลือกรูปใบนำฝาก</b></div>
+        <small>แตะเพื่อเปิดกล้อง</small>
+      </label>
+      <input id="depositInput" type="file" accept="image/*" capture="environment" class="hide">
+      <img id="depositThumb" class="thumb hide" alt="">
+      <div id="depositOcr" class="hint hide" style="margin-top:6px"></div>
+      <div class="row">
+        <div>
+          <label>ยอดนำฝาก (บาท)</label>
+          <input id="depositTotal" type="number" inputmode="decimal" step="0.01" placeholder="0.00">
+        </div>
+        <div>
+          <label>ช่องทาง</label>
+          <select id="channel">
+            <option value="">—</option>
+            <option value="bank">ธนาคาร</option>
+            <option value="cpaxtra">CP AXTRA</option>
+            <option value="seven">เซเว่น</option>
+            <option value="counter">Counter Service</option>
+            <option value="other">อื่น ๆ</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- สรุป -->
+    <div class="card">
+      <h2>3) ตรวจสอบ & ส่ง</h2>
+      <div class="row">
+        <div><label>วันที่ยอดขาย</label><input id="bizDate" type="date"></div>
+      </div>
+      <label>หมายเหตุ (ถ้ามี)</label>
+      <textarea id="note" placeholder="เช่น ฝากช้า / เครื่องมีปัญหา"></textarea>
+      <div id="diffBox" class="diff" style="background:var(--line)">ส่วนต่าง: —</div>
+      <button id="submitBtn" class="btn">ส่งใบนำฝาก</button>
+      <div id="submitMsg" class="msg hide"></div>
+    </div>
+
+    <!-- ประวัติ -->
+    <div class="card">
+      <h2>ประวัติล่าสุด</h2>
+      <div id="historyBox" class="hint">—</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let GPS = null;           // {lat,lng,accuracy}
+let dayEndFile = null, depositFile = null;
+
+// ---------- utils ----------
+async function api(path, opts={}){
+  const r = await fetch(path, {credentials:'same-origin', ...opts});
+  let j = {}; try{ j = await r.json(); }catch(e){}
+  if(!r.ok) throw new Error(j.detail || ('HTTP '+r.status));
+  return j;
+}
+const fmt = n => (n==null||isNaN(n)) ? '—' : Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+function getGPS(){
+  if(!navigator.geolocation){ $('locLine').textContent='📍 อุปกรณ์ไม่รองรับ GPS'; return; }
+  navigator.geolocation.getCurrentPosition(
+    p => { GPS={lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy}; refreshLoc(); },
+    e => { $('locLine').innerHTML='📍 <span class="pill warn">ไม่ได้ตำแหน่ง</span> '+(e.message||''); },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:0}
+  );
+}
+let SHOP_HASLOC=false, SHOP_RADIUS=null;
+function refreshLoc(){
+  if(!GPS){ return; }
+  let s = `📍 lat ${GPS.lat.toFixed(5)}, lng ${GPS.lng.toFixed(5)} (±${Math.round(GPS.accuracy)} m)`;
+  $('locLine').innerHTML = s + ' — ระยะห่างจากร้านจะคำนวณตอนถ่ายรูป';
+}
+
+// ---------- login ----------
+$('loginBtn').onclick = async () => {
+  $('loginMsg').classList.add('hide');
+  const username = $('username').value.trim(), password = $('password').value.trim();
+  if(!username||!password){ showLoginErr('กรอก username และ password'); return; }
+  $('loginBtn').disabled=true; $('loginBtn').innerHTML='<span class="spin"></span>';
+  try{
+    await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username,password})});
+    await boot();
+  }catch(e){ showLoginErr(e.message); }
+  finally{ $('loginBtn').disabled=false; $('loginBtn').textContent='เข้าสู่ระบบ'; }
+};
+$('password').addEventListener('keydown', e=>{ if(e.key==='Enter') $('loginBtn').click(); });
+function showLoginErr(m){ const el=$('loginMsg'); el.textContent=m; el.classList.remove('hide'); }
+
+$('logoutBtn').onclick = async () => {
+  await api('/api/logout',{method:'POST'});
+  location.reload();
+};
+
+// ---------- OCR capture ----------
+function wireCapture(inputId, capId, thumbId, ocrId, kind){
+  $(inputId).onchange = async (ev) => {
+    const file = ev.target.files[0]; if(!file) return;
+    if(kind==='day_end') dayEndFile=file; else depositFile=file;
+    const url = URL.createObjectURL(file);
+    $(thumbId).src=url; $(thumbId).classList.remove('hide');
+    $(capId).classList.add('done');
+    const ocrEl = $(ocrId); ocrEl.classList.remove('hide');
+    ocrEl.innerHTML='<span class="spin" style="border-color:#8884;border-top-color:var(--dd)"></span> กำลังอ่านด้วย OCR…';
+
+    const fd = new FormData();
+    fd.append('file', file); fd.append('kind', kind);
+    if(GPS){ fd.append('lat',GPS.lat); fd.append('lng',GPS.lng); }
+    try{
+      const r = await api('/api/ocr',{method:'POST',body:fd});
+      const p = r.parsed, loc = r.location;
+      if(kind==='day_end'){
+        if(p.cash_sales!=null){ $('cashSales').value=p.cash_sales; }
+        if(p.biz_date){ $('bizDate').value=p.biz_date; }
+      }else{
+        if(p.deposit_amount!=null){ $('depositTotal').value=p.deposit_amount; }
+        if(p.channel){ $('channel').value=p.channel; }
+      }
+      renderOcr(ocrEl, p, loc, kind);
+      showDistance(loc);
+      updateDiff();
+    }catch(e){ ocrEl.innerHTML='<span class="pill warn">OCR ไม่พร้อม</span> กรอกตัวเลขเอง — '+e.message; }
+  };
+}
+function renderOcr(el, p, loc, kind){
+  if(p.available===false){
+    el.innerHTML='<span class="pill warn">ยังไม่ได้ติดตั้ง OCR</span> กรอกตัวเลขเอง';
+    return;
+  }
+  const amt = kind==='day_end' ? p.cash_sales : p.deposit_amount;
+  if(amt==null){ el.innerHTML='<span class="pill warn">อ่านเลขไม่ชัด</span> โปรดตรวจ/แก้ตัวเลข'; return; }
+  el.innerHTML='<span class="pill ok">OCR อ่านได้</span> '+fmt(amt)+' บาท — โปรดตรวจความถูกต้อง';
+}
+function showDistance(loc){
+  if(!loc || loc.distance_m==null){ return; }
+  const el=$('locLine');
+  const km = loc.km!=null ? loc.km.toFixed(3) : '—';
+  const inRadius = loc.within_radius===1;
+  el.innerHTML = `📍 ห่างจากร้าน <b>${loc.distance_m} m</b> (${km} กม.) · รัศมี ${loc.radius_m} m ` +
+    (inRadius ? '<span class="pill ok">อยู่ที่ร้าน</span>' : '<span class="pill bad">นอกรัศมีร้าน</span>');
+}
+wireCapture('dayEndInput','dayEndCap','dayEndThumb','dayEndOcr','day_end');
+wireCapture('depositInput','depositCap','depositThumb','depositOcr','deposit');
+
+// ---------- diff ----------
+['cashSales','depositTotal'].forEach(id=>$(id).addEventListener('input',updateDiff));
+function updateDiff(){
+  const c=parseFloat($('cashSales').value), d=parseFloat($('depositTotal').value);
+  const box=$('diffBox');
+  if(isNaN(c)||isNaN(d)){ box.textContent='ส่วนต่าง: —'; box.style.background='var(--line)'; box.style.color='var(--ink)'; return; }
+  const diff=Math.round((d-c)*100)/100;
+  if(diff===0){ box.textContent='ส่วนต่าง: 0.00 — ✓ ตรงกัน'; box.style.background='var(--okbg)'; box.style.color='var(--ok)'; }
+  else if(diff>0){ box.textContent='เกิน +'+fmt(diff)+' บาท'; box.style.background='var(--warnbg)'; box.style.color='var(--warn)'; }
+  else{ box.textContent='ขาด '+fmt(diff)+' บาท'; box.style.background='var(--badbg)'; box.style.color='var(--bad)'; }
+}
+
+// ---------- submit ----------
+$('submitBtn').onclick = async () => {
+  const msg=$('submitMsg'); msg.classList.add('hide');
+  const c=parseFloat($('cashSales').value), d=parseFloat($('depositTotal').value);
+  if(isNaN(c)){ return showSubmit('กรอก Cash Sales (จาก Day End)', true); }
+  if(isNaN(d)){ return showSubmit('กรอกยอดนำฝาก', true); }
+  $('submitBtn').disabled=true; $('submitBtn').innerHTML='<span class="spin"></span> กำลังส่ง…';
+  const fd=new FormData();
+  if(dayEndFile) fd.append('day_end_file', dayEndFile);
+  if(depositFile) fd.append('deposit_file', depositFile);
+  fd.append('cash_sales', c); fd.append('deposit_total', d);
+  fd.append('deposit_channel', $('channel').value);
+  fd.append('biz_date', $('bizDate').value);
+  fd.append('note', $('note').value);
+  if(GPS){ fd.append('lat',GPS.lat); fd.append('lng',GPS.lng); fd.append('accuracy',GPS.accuracy); }
+  fd.append('captured_at', new Date().toISOString().slice(0,19).replace('T',' '));
+  try{
+    const r=await api('/api/submit',{method:'POST',body:fd});
+    showSubmit('✓ ส่งสำเร็จ #'+r.submission_id+' — ส่วนต่าง '+fmt(r.diff)+' บาท', false);
+    loadHistory();
+  }catch(e){ showSubmit('ส่งไม่สำเร็จ: '+e.message, true); }
+  finally{ $('submitBtn').disabled=false; $('submitBtn').textContent='ส่งใบนำฝาก'; }
+};
+function showSubmit(m,isErr){ const el=$('submitMsg'); el.textContent=m;
+  el.className='msg '+(isErr?'err':'ok'); el.classList.remove('hide'); }
+
+// ---------- history ----------
+async function loadHistory(){
+  try{
+    const r=await api('/api/submissions?limit=15');
+    if(!r.rows.length){ $('historyBox').textContent='ยังไม่มีประวัติ'; return; }
+    let h='<table><tr><th>วันที่</th><th>นำฝาก</th><th>ส่วนต่าง</th><th>ที่ร้าน</th></tr>';
+    for(const x of r.rows){
+      const diff = x.diff==null?'—':fmt(x.diff);
+      const dc = x.diff>0?'var(--warn)':(x.diff<0?'var(--bad)':'var(--ok)');
+      const at = x.within_radius==1?'✓':(x.within_radius==0?'✗':'—');
+      h+=`<tr><td>${x.biz_date||x.created_at||'—'}</td><td>${fmt(x.deposit_total)}</td>`+
+         `<td style="color:${dc}">${diff}</td><td>${at}</td></tr>`;
+    }
+    h+='</table>';
+    $('historyBox').innerHTML=h;
+  }catch(e){ $('historyBox').textContent='โหลดประวัติไม่ได้'; }
+}
+
+// ---------- boot ----------
+async function boot(){
+  const me = await api('/api/me');
+  if(!me.authenticated){ $('loginView').classList.remove('hide'); $('appView').classList.add('hide'); return; }
+  $('loginView').classList.add('hide'); $('appView').classList.remove('hide');
+  const s=me.shop;
+  $('shopName').textContent = s.shop_code+' · '+s.shop_name;
+  $('shopMeta').innerHTML = `DM: ${s.dm||'—'} · Head: ${s.head||'—'}`+
+    (me.ocr_available?'':' · <span class="pill warn">OCR ยังไม่พร้อม (กรอกเลขเอง)</span>');
+  SHOP_HASLOC=me.has_location; SHOP_RADIUS=me.radius_m;
+  if(!me.has_location){ $('locLine').innerHTML='📍 <span class="pill warn">ร้านนี้ยังไม่มีพิกัดอ้างอิง</span> (shop_location)'; }
+  $('bizDate').value = new Date().toISOString().slice(0,10);
+  getGPS();
+  loadHistory();
+}
+boot();
+</script>
+</body>
+</html>
