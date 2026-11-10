@@ -12,6 +12,10 @@ __pycache__/
 *.pyc
 *.pyo
 
+# ความลับอื่น ๆ — token / สคริปต์ช่วย push
+repo.txt
+push_to_github.sh
+
 # เบ็ดเตล็ด
 *.log
 .DS_Store
