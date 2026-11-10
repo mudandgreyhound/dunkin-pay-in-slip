@@ -3,171 +3,247 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Dunkin' Pay-in Slip</title>
+<title>Dunkin' แจ้งยอดฝากเงิน</title>
 <style>
   :root{
-    --dd:#FF671F; --pink:#E31C79; --bg:#faf7f3; --card:#fff; --line:#eceae6;
-    --ink:#2a241e; --muted:#8a8178; --ok:#157a3a; --okbg:#e9f8ee;
-    --bad:#c0392b; --badbg:#fdecec; --warn:#b26a00; --warnbg:#fff4e2;
+    --dd:#FF671F; --pink:#E31C79; --bg:#f4f1ec; --card:#fff; --line:#e7e3dd;
+    --ink:#241f1a; --muted:#8a8178; --field:#fbfaf8;
+    --ok:#157a3a; --okbg:#e9f8ee; --bad:#c0392b; --badbg:#fdecec;
+    --warn:#b26a00; --warnbg:#fff4e2;
   }
   @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-    --bg:#17130f; --card:#201a15; --line:#2e261f; --ink:#f0e9e1; --muted:#b8aca0;
-    --okbg:#13301f; --badbg:#3a1a19; --warnbg:#33260f;
+    --bg:#15110d; --card:#201a15; --line:#2e261f; --ink:#f0e9e1; --muted:#b2a699;
+    --field:#191410; --okbg:#13301f; --badbg:#3a1a19; --warnbg:#33260f;
   }}
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);
-       -webkit-font-smoothing:antialiased;min-height:100vh}
-  header{background:linear-gradient(90deg,var(--dd),var(--pink));color:#fff;padding:14px 16px;
-         display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
-  header .brand{font-weight:800;font-size:18px;letter-spacing:.5px}
-  header .brand small{font-weight:700;opacity:.85;font-size:11px;letter-spacing:1.5px;display:block}
-  header button{background:rgba(255,255,255,.2);color:#fff;border:0;border-radius:8px;
-                padding:7px 12px;font-weight:700;font-size:13px}
-  .wrap{max-width:480px;margin:0 auto;padding:16px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
-  h2{margin:0 0 4px;font-size:16px}
-  .hint{color:var(--muted);font-size:12px;line-height:1.5}
-  label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:12px 0 5px}
-  input[type=text],input[type=password],input[type=date],input[type=number],textarea,select{
-    width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px;
-    background:var(--bg);color:var(--ink)}
-  textarea{min-height:60px;resize:vertical}
-  .btn{display:block;width:100%;padding:14px;border:0;border-radius:12px;font-size:16px;font-weight:800;
-       color:#fff;background:var(--dd);margin-top:14px}
-  .btn:disabled{opacity:.5}
-  .btn.ghost{background:var(--card);color:var(--dd);border:2px solid var(--dd)}
-  .capture{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px;border:2px dashed var(--line);
-           border-radius:12px;text-align:center;cursor:pointer}
-  .capture.done{border-style:solid;border-color:var(--ok)}
-  .capture .ico{font-size:30px}
-  .capture small{color:var(--muted);font-size:12px}
-  .thumb{width:100%;max-height:200px;object-fit:contain;border-radius:10px;margin-top:8px;background:#0001}
-  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800}
-  .pill.ok{background:var(--okbg);color:var(--ok)} .pill.bad{background:var(--badbg);color:var(--bad)}
-  .pill.warn{background:var(--warnbg);color:var(--warn)}
-  .row{display:flex;gap:10px} .row>*{flex:1}
-  .big{font-size:22px;font-weight:800}
-  .diff{text-align:center;padding:12px;border-radius:12px;margin-top:6px;font-weight:800}
-  .msg{padding:10px 12px;border-radius:10px;font-size:13px;margin-top:10px;font-weight:600}
-  .msg.err{background:var(--badbg);color:var(--bad)} .msg.ok{background:var(--okbg);color:var(--ok)}
-  .spin{display:inline-block;width:14px;height:14px;border:2px solid #fff6;border-top-color:#fff;
-        border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px}
-  @keyframes s{to{transform:rotate(360deg)}}
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:480px;margin:0 auto;padding:16px 16px 40px}
+  .req{color:var(--dd)}
+  .muted{color:var(--muted)}
   .hide{display:none!important}
-  .loc{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+
+  /* header */
+  .appbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:18px 16px 10px;text-align:center}
+  .appbar .logout{position:absolute;right:14px;top:16px;background:var(--card);border:1px solid var(--line);
+       color:var(--muted);border-radius:9px;padding:6px 11px;font-weight:700;font-size:12px}
+  .brand{color:var(--dd);font-weight:900;font-size:30px;letter-spacing:.5px;line-height:1}
+  .apptitle{font-weight:800;font-size:20px;margin-top:4px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:13px}
+  label.fl{display:block;font-size:13px;font-weight:800;margin:0 0 6px}
+  .sub{font-size:12px;color:var(--muted)}
+  input[type=text],input[type=password],input[type=tel],input[type=number],input[type=date],textarea{
+    width:100%;padding:13px 12px;border:1px solid var(--line);border-radius:12px;font-size:16px;
+    background:var(--field);color:var(--ink)}
+  textarea{min-height:56px;resize:vertical}
+  .row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+  .field-ic{position:relative}
+  .field-ic .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:18px;opacity:.8}
+  .field-ic input{padding-left:40px}
+
+  /* shop row */
+  .shoprow{display:flex;align-items:center;gap:14px}
+  .shopcode{flex:0 0 auto;min-width:150px}
+  .readfield{padding:13px 12px;border:1px solid var(--line);border-radius:12px;background:var(--field);
+       font-size:17px;font-weight:800;letter-spacing:1px}
+  .shopname{font-size:13px}.shopname b{display:block;font-size:15px;font-weight:800;margin-top:2px;letter-spacing:0}
+
+  /* bank card */
+  .bankcard{display:flex;align-items:center;gap:13px}
+  .banklogo{flex:0 0 auto;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+       color:#fff;font-weight:800;font-size:12px;letter-spacing:.3px}
+  .bankinfo{flex:1;min-width:0}
+  .bankinfo .bn{font-size:13px;color:var(--muted)}
+  .bankinfo .ba{font-size:20px;font-weight:800;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .altlink{color:var(--pink);font-weight:800;font-size:13px;white-space:nowrap;cursor:pointer;background:none;border:0}
+
+  /* channel radios */
+  .chans{display:flex;gap:10px}
+  .chan{flex:1;position:relative}
+  .chan input{position:absolute;opacity:0;pointer-events:none}
+  .chan .box{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px;border:1.5px solid var(--line);
+       border-radius:14px;background:var(--field);cursor:pointer;text-align:center}
+  .chan .ico{font-size:22px;font-weight:900;line-height:1}
+  .chan .nm{font-size:13px;font-weight:700}
+  .chan input:checked + .box{border-color:var(--dd);background:#fff6f0;box-shadow:0 0 0 1px var(--dd) inset}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chan input:checked + .box{background:#2a1c13}}
+  .seven .ico{color:#008c45}.lotus .ico{color:#0a7d3e;font-size:14px;font-weight:900}.bank .ico{color:var(--muted)}
+
+  /* attach photo */
+  .attach{display:flex;gap:12px;align-items:stretch}
+  .attachbtn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+       padding:20px 10px;border:1.5px dashed var(--line);border-radius:14px;cursor:pointer;text-align:center;color:var(--pink)}
+  .attachbtn .cam{font-size:26px}
+  .attachbtn b{font-size:14px}.attachbtn small{color:var(--muted);font-size:11px}
+  .attachbtn.done{border-style:solid;border-color:var(--ok);color:var(--ok)}
+  .thumbwrap{position:relative;flex:0 0 108px}
+  .thumbwrap img{width:108px;height:128px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
+  .thumbwrap .rm{position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:#333;color:#fff;
+       border:2px solid var(--card);font-size:13px;line-height:1;cursor:pointer}
+  .ocrnote{font-size:12px;margin-top:8px}
+
+  .pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800}
+  .pill.ok{background:var(--okbg);color:var(--ok)}.pill.bad{background:var(--badbg);color:var(--bad)}
+  .pill.warn{background:var(--warnbg);color:var(--warn)}
+  .amount input{font-size:24px;font-weight:800}
+  .diff{text-align:center;padding:12px;border-radius:12px;margin-top:12px;font-weight:800;background:var(--line)}
+  .loc{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
+
+  .btn{display:block;width:100%;padding:16px;border:0;border-radius:14px;font-size:17px;font-weight:800;color:#fff;
+       background:var(--dd);margin-top:6px}
+  .btn:disabled{opacity:.55}
+  .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:10px}
+  .msg{padding:11px 12px;border-radius:11px;font-size:13px;margin-top:10px;font-weight:600}
+  .msg.err{background:var(--badbg);color:var(--bad)}.msg.ok{background:var(--okbg);color:var(--ok)}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid #fff6;border-top-color:#fff;border-radius:50%;
+       animation:s .7s linear infinite;vertical-align:-2px}
+  @keyframes s{to{transform:rotate(360deg)}}
   table{width:100%;border-collapse:collapse;font-size:12px}
   th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right}
-  th:first-child,td:first-child{text-align:left}
-  th{color:var(--muted);font-weight:700}
+  th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-weight:700}
+  h3.sec{font-size:14px;margin:0 0 10px}
 </style>
 </head>
 <body>
 
 <!-- ======= LOGIN ======= -->
-<div id="loginView" class="wrap" style="padding-top:36px">
+<div id="loginView" class="wrap" style="padding-top:40px">
   <div style="text-align:center;margin-bottom:18px">
-    <div style="color:var(--dd);font-weight:800;font-size:30px;letter-spacing:.5px">DUNKIN'</div>
-    <div style="color:var(--muted);font-size:12px;font-weight:700;letter-spacing:2.5px">PAY-IN SLIP</div>
+    <div class="brand">DUNKIN'</div>
+    <div class="apptitle">แจ้งยอดฝากเงิน</div>
   </div>
   <div class="card">
-    <h2>เข้าสู่ระบบ</h2>
-    <div class="hint">ใช้รหัสร้าน — Username: <b>GD</b> ตามด้วยรหัสร้าน · Password: รหัสร้าน</div>
-    <label>Username</label>
-    <input id="username" type="text" inputmode="text" autocapitalize="characters" placeholder="เช่น GD0143" autocomplete="username">
-    <label>Password</label>
+    <label class="fl">เข้าสู่ระบบด้วยรหัสร้าน</label>
+    <div class="sub" style="margin-bottom:10px">Username: <b>GD</b> ตามด้วยรหัสร้าน · Password: รหัสร้าน</div>
+    <label class="fl">Username</label>
+    <input id="username" type="text" autocapitalize="characters" placeholder="เช่น GD0143" autocomplete="username">
+    <label class="fl" style="margin-top:12px">Password</label>
     <input id="password" type="password" inputmode="numeric" placeholder="เช่น 0143" autocomplete="current-password">
-    <button id="loginBtn" class="btn">เข้าสู่ระบบ</button>
+    <button id="loginBtn" class="btn" style="margin-top:16px">เข้าสู่ระบบ</button>
     <div id="loginMsg" class="msg err hide"></div>
   </div>
 </div>
 
 <!-- ======= APP ======= -->
 <div id="appView" class="hide">
-  <header>
-    <div class="brand">DUNKIN' <small>PAY-IN SLIP</small></div>
-    <button id="logoutBtn">ออก</button>
-  </header>
-  <div class="wrap">
+  <div class="appbar">
+    <button id="logoutBtn" class="logout">ออก</button>
+    <div class="brand">DUNKIN'</div>
+    <div class="apptitle">แจ้งยอดฝากเงิน</div>
+  </div>
+  <div class="wrap" style="padding-top:4px">
 
-    <div class="card" id="shopCard">
-      <h2 id="shopName">—</h2>
-      <div class="hint" id="shopMeta">—</div>
+    <!-- รหัสสาขา -->
+    <div class="card">
+      <label class="fl">รหัสสาขา <span class="req">*</span></label>
+      <div class="shoprow">
+        <div class="shopcode"><div class="readfield" id="shopCode">—</div></div>
+        <div class="shopname"><span class="muted">สาขา</span><b id="shopName">—</b></div>
+      </div>
+    </div>
+
+    <!-- บัญชีฝากประจำสาขา -->
+    <div class="card">
+      <label class="fl" style="display:flex;justify-content:space-between;align-items:center">
+        <span>บัญชีฝากประจำสาขา</span>
+      </label>
+      <div class="bankcard">
+        <div class="banklogo" id="bankLogo" style="background:#9a9a9a">—</div>
+        <div class="bankinfo">
+          <div class="bn" id="bankTh">—</div>
+          <div class="ba" id="bankAcct">—</div>
+        </div>
+        <button type="button" class="altlink" id="altToggle">ใช้บัญชีอื่น ›</button>
+      </div>
+      <div class="sub" id="bankHint" style="margin-top:8px">บัญชีอื่นต้องรอบัญชีตรวจสอบ</div>
+      <div id="altBox" class="hide" style="margin-top:10px">
+        <input id="altAccount" type="text" inputmode="numeric" placeholder="เลขบัญชีอื่นที่นำฝาก (รอตรวจสอบ)">
+      </div>
+    </div>
+
+    <!-- วันที่ -->
+    <div class="card">
+      <div class="row">
+        <div><label class="fl">วันที่ฝาก <span class="req">*</span></label><input id="depositDate" type="date"></div>
+        <div><label class="fl">วันที่ยอดขาย <span class="req">*</span></label><input id="bizDate" type="date"></div>
+      </div>
+    </div>
+
+    <!-- ช่องทางฝาก -->
+    <div class="card">
+      <label class="fl">ช่องทางฝาก <span class="req">*</span></label>
+      <div class="chans">
+        <label class="chan seven"><input type="radio" name="chan" value="seven">
+          <span class="box"><span class="ico">7‑11</span><span class="nm">7‑Eleven</span></span></label>
+        <label class="chan lotus"><input type="radio" name="chan" value="cpaxtra">
+          <span class="box"><span class="ico">Lotus's</span><span class="nm">Lotus's</span></span></label>
+        <label class="chan bank"><input type="radio" name="chan" value="bank">
+          <span class="box"><span class="ico">🏛️</span><span class="nm">ธนาคาร</span></span></label>
+      </div>
+    </div>
+
+    <!-- ยอดเงินฝาก + รูปใบนำฝาก -->
+    <div class="card">
+      <label class="fl">ยอดเงินฝาก (บาท) <span class="req">*</span></label>
+      <div class="field-ic amount"><span class="ic">🪙</span>
+        <input id="depositTotal" type="number" inputmode="decimal" step="0.01" placeholder="0.00"></div>
+
+      <label class="fl" style="margin-top:14px">แนบรูปใบนำฝาก <span class="req">*</span></label>
+      <div class="attach">
+        <label for="depositInput" class="attachbtn" id="depositBtn">
+          <div class="cam">📷</div><b>ถ่ายรูป / เลือกรูป</b><small>ใบนำฝาก (ธนาคาร/7‑11/Lotus's)</small>
+        </label>
+        <input id="depositInput" type="file" accept="image/*" capture="environment" class="hide">
+        <div class="thumbwrap hide" id="depositThumbWrap">
+          <img id="depositThumb" alt=""><div class="rm" id="depositRm">✕</div>
+        </div>
+      </div>
+      <div id="depositOcr" class="ocrnote hide"></div>
+    </div>
+
+    <!-- ผู้ฝาก -->
+    <div class="card">
+      <div class="row">
+        <div><label class="fl">ชื่อผู้ฝาก <span class="req">*</span></label>
+          <input id="depositorName" type="text" placeholder="ชื่อผู้นำฝาก" autocomplete="name"></div>
+        <div><label class="fl">เบอร์โทร <span class="req">*</span></label>
+          <input id="depositorPhone" type="tel" inputmode="tel" placeholder="08X-XXX-XXXX" autocomplete="tel"></div>
+      </div>
+    </div>
+
+    <!-- Day End ตรวจสอบส่วนต่าง -->
+    <div class="card">
+      <h3 class="sec">ยอด Day End — เงินสดที่ต้องนำฝาก</h3>
+      <label class="fl">แนบรูป Day End <span class="req">*</span></label>
+      <div class="attach">
+        <label for="dayEndInput" class="attachbtn" id="dayEndBtn">
+          <div class="cam">🧾</div><b>ถ่ายรูป / เลือกรูป</b><small>ระบบจะอ่าน Cash Sales</small>
+        </label>
+        <input id="dayEndInput" type="file" accept="image/*" capture="environment" class="hide">
+        <div class="thumbwrap hide" id="dayEndThumbWrap">
+          <img id="dayEndThumb" alt=""><div class="rm" id="dayEndRm">✕</div>
+        </div>
+      </div>
+      <div id="dayEndOcr" class="ocrnote hide"></div>
+      <label class="fl" style="margin-top:12px">Cash Sales — เงินสดที่ต้องนำฝาก (บาท) <span class="req">*</span></label>
+      <input id="cashSales" type="number" inputmode="decimal" step="0.01" placeholder="0.00">
+      <div id="diffBox" class="diff">ส่วนต่าง: —</div>
       <div class="loc" id="locLine">📍 กำลังหาตำแหน่ง…</div>
     </div>
 
-    <!-- Day End -->
+    <!-- หมายเหตุ + ส่ง -->
     <div class="card">
-      <h2>1) Day End Report</h2>
-      <div class="hint">ถ่ายรูปใบ Day End — ระบบจะอ่าน <b>Cash Sales</b> (เงินสดที่ต้องนำฝาก)</div>
-      <label for="dayEndInput" class="capture" id="dayEndCap">
-        <div class="ico">🧾</div><div><b>ถ่าย / เลือกรูป Day End</b></div>
-        <small>แตะเพื่อเปิดกล้อง</small>
-      </label>
-      <input id="dayEndInput" type="file" accept="image/*" capture="environment" class="hide">
-      <img id="dayEndThumb" class="thumb hide" alt="">
-      <div id="dayEndOcr" class="hint hide" style="margin-top:6px"></div>
-      <label>Cash Sales — เงินสดที่ต้องนำฝาก (บาท)</label>
-      <input id="cashSales" type="number" inputmode="decimal" step="0.01" placeholder="0.00">
-    </div>
-
-    <!-- Deposit -->
-    <div class="card">
-      <h2>2) ใบนำฝาก</h2>
-      <div class="hint">ถ่ายใบนำฝาก (ธนาคาร / CP AXTRA / เซเว่น ฯลฯ) — ระบบจะอ่านยอดเงิน</div>
-      <div id="bankReminder" class="msg hide" style="background:var(--warnbg);color:var(--warn)"></div>
-      <label for="depositInput" class="capture" id="depositCap">
-        <div class="ico">🏧</div><div><b>ถ่าย / เลือกรูปใบนำฝาก</b></div>
-        <small>แตะเพื่อเปิดกล้อง</small>
-      </label>
-      <input id="depositInput" type="file" accept="image/*" capture="environment" class="hide">
-      <img id="depositThumb" class="thumb hide" alt="">
-      <div id="depositOcr" class="hint hide" style="margin-top:6px"></div>
-      <div class="row">
-        <div>
-          <label>ยอดนำฝาก (บาท)</label>
-          <input id="depositTotal" type="number" inputmode="decimal" step="0.01" placeholder="0.00">
-        </div>
-        <div>
-          <label>ช่องทาง</label>
-          <select id="channel">
-            <option value="">—</option>
-            <option value="bank">ธนาคาร</option>
-            <option value="cpaxtra">CP AXTRA</option>
-            <option value="seven">เซเว่น</option>
-            <option value="counter">Counter Service</option>
-            <option value="other">อื่น ๆ</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- สรุป -->
-    <div class="card">
-      <h2>3) ตรวจสอบ & ส่ง</h2>
-      <div class="row">
-        <div><label>วันที่ยอดขาย</label><input id="bizDate" type="date"></div>
-      </div>
-      <div class="row">
-        <div>
-          <label>ชื่อผู้ฝาก</label>
-          <input id="depositorName" type="text" placeholder="ชื่อผู้นำฝาก" autocomplete="name">
-        </div>
-        <div>
-          <label>เบอร์โทรศัพท์</label>
-          <input id="depositorPhone" type="tel" inputmode="tel" placeholder="08x-xxx-xxxx" autocomplete="tel">
-        </div>
-      </div>
-      <label>หมายเหตุ (ถ้ามี)</label>
+      <label class="fl">หมายเหตุ (ถ้ามี)</label>
       <textarea id="note" placeholder="เช่น ฝากช้า / เครื่องมีปัญหา"></textarea>
-      <div id="diffBox" class="diff" style="background:var(--line)">ส่วนต่าง: —</div>
-      <button id="submitBtn" class="btn">ส่งใบนำฝาก</button>
+      <button id="submitBtn" class="btn">ส่งแจ้งยอดฝาก</button>
+      <div class="foot">ส่งแล้วสถานะรอตรวจสอบ</div>
       <div id="submitMsg" class="msg hide"></div>
     </div>
 
-    <!-- ประวัติ -->
     <div class="card">
-      <h2>ประวัติล่าสุด</h2>
-      <div id="historyBox" class="hint">—</div>
+      <h3 class="sec">ประวัติล่าสุด</h3>
+      <div id="historyBox" class="sub">—</div>
     </div>
 
   </div>
@@ -175,109 +251,93 @@
 
 <script>
 const $ = id => document.getElementById(id);
-let GPS = null;           // {lat,lng,accuracy}
-let dayEndFile = null, depositFile = null;
+let GPS=null, dayEndFile=null, depositFile=null;
 
-// ---------- utils ----------
 async function api(path, opts={}){
   const r = await fetch(path, {credentials:'same-origin', ...opts});
-  let j = {}; try{ j = await r.json(); }catch(e){}
+  let j={}; try{ j=await r.json(); }catch(e){}
   if(!r.ok) throw new Error(j.detail || ('HTTP '+r.status));
   return j;
 }
 const fmt = n => (n==null||isNaN(n)) ? '—' : Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
 
+// ---------- channel radios ----------
+function getChannel(){ const c=document.querySelector('input[name=chan]:checked'); return c?c.value:''; }
+function setChannel(v){ const el=document.querySelector(`input[name=chan][value="${v}"]`); if(el) el.checked=true; }
+
+// ---------- GPS ----------
 function getGPS(){
   if(!navigator.geolocation){ $('locLine').textContent='📍 อุปกรณ์ไม่รองรับ GPS'; return; }
   navigator.geolocation.getCurrentPosition(
-    p => { GPS={lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy}; refreshLoc(); },
-    e => { $('locLine').innerHTML='📍 <span class="pill warn">ไม่ได้ตำแหน่ง</span> '+(e.message||''); },
-    {enableHighAccuracy:true, timeout:10000, maximumAge:0}
+    p=>{ GPS={lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy};
+         $('locLine').innerHTML=`📍 lat ${GPS.lat.toFixed(5)}, lng ${GPS.lng.toFixed(5)} (±${Math.round(GPS.accuracy)} m) — ระยะห่างจะคำนวณตอนถ่ายรูป`; },
+    e=>{ $('locLine').innerHTML='📍 <span class="pill warn">ไม่ได้ตำแหน่ง</span> '+(e.message||''); },
+    {enableHighAccuracy:true,timeout:10000,maximumAge:0}
   );
-}
-let SHOP_HASLOC=false, SHOP_RADIUS=null;
-function refreshLoc(){
-  if(!GPS){ return; }
-  let s = `📍 lat ${GPS.lat.toFixed(5)}, lng ${GPS.lng.toFixed(5)} (±${Math.round(GPS.accuracy)} m)`;
-  $('locLine').innerHTML = s + ' — ระยะห่างจากร้านจะคำนวณตอนถ่ายรูป';
 }
 
 // ---------- login ----------
 $('loginBtn').onclick = async () => {
   $('loginMsg').classList.add('hide');
-  const username = $('username').value.trim(), password = $('password').value.trim();
-  if(!username||!password){ showLoginErr('กรอก username และ password'); return; }
+  const u=$('username').value.trim(), p=$('password').value.trim();
+  if(!u||!p){ return showLoginErr('กรอก username และ password'); }
   $('loginBtn').disabled=true; $('loginBtn').innerHTML='<span class="spin"></span>';
-  try{
-    await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({username,password})});
-    await boot();
-  }catch(e){ showLoginErr(e.message); }
+  try{ await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})}); await boot(); }
+  catch(e){ showLoginErr(e.message); }
   finally{ $('loginBtn').disabled=false; $('loginBtn').textContent='เข้าสู่ระบบ'; }
 };
-$('password').addEventListener('keydown', e=>{ if(e.key==='Enter') $('loginBtn').click(); });
+$('password').addEventListener('keydown',e=>{ if(e.key==='Enter') $('loginBtn').click(); });
 function showLoginErr(m){ const el=$('loginMsg'); el.textContent=m; el.classList.remove('hide'); }
+$('logoutBtn').onclick = async () => { await api('/api/logout',{method:'POST'}); location.reload(); };
 
-$('logoutBtn').onclick = async () => {
-  await api('/api/logout',{method:'POST'});
-  location.reload();
+// ---------- ใช้บัญชีอื่น ----------
+$('altToggle').onclick = () => {
+  const b=$('altBox'); b.classList.toggle('hide');
+  if(!b.classList.contains('hide')) $('altAccount').focus();
 };
 
 // ---------- OCR capture ----------
-function wireCapture(inputId, capId, thumbId, ocrId, kind){
+function wireCapture(inputId, btnId, wrapId, thumbId, rmId, ocrId, kind){
   $(inputId).onchange = async (ev) => {
-    const file = ev.target.files[0]; if(!file) return;
+    const file=ev.target.files[0]; if(!file) return;
     if(kind==='day_end') dayEndFile=file; else depositFile=file;
-    const url = URL.createObjectURL(file);
-    $(thumbId).src=url; $(thumbId).classList.remove('hide');
-    $(capId).classList.add('done');
-    const ocrEl = $(ocrId); ocrEl.classList.remove('hide');
+    $(thumbId).src=URL.createObjectURL(file);
+    $(wrapId).classList.remove('hide'); $(btnId).classList.add('done');
+    const ocrEl=$(ocrId); ocrEl.classList.remove('hide');
     ocrEl.innerHTML='<span class="spin" style="border-color:#8884;border-top-color:var(--dd)"></span> กำลังอ่านด้วย OCR…';
-
-    const fd = new FormData();
-    fd.append('file', file); fd.append('kind', kind);
+    const fd=new FormData(); fd.append('file',file); fd.append('kind',kind);
     if(GPS){ fd.append('lat',GPS.lat); fd.append('lng',GPS.lng); }
     try{
-      const r = await api('/api/ocr',{method:'POST',body:fd});
-      const p = r.parsed, loc = r.location;
-      if(kind==='day_end'){
-        if(p.cash_sales!=null){ $('cashSales').value=p.cash_sales; }
-        if(p.biz_date){ $('bizDate').value=p.biz_date; }
-      }else{
-        if(p.deposit_amount!=null){ $('depositTotal').value=p.deposit_amount; }
-        if(p.channel){ $('channel').value=p.channel; }
-      }
-      renderOcr(ocrEl, p, loc, kind);
-      showDistance(loc);
-      updateDiff();
+      const r=await api('/api/ocr',{method:'POST',body:fd}); const p=r.parsed, loc=r.location;
+      if(kind==='day_end'){ if(p.cash_sales!=null) $('cashSales').value=p.cash_sales; if(p.biz_date) $('bizDate').value=p.biz_date; }
+      else{ if(p.deposit_amount!=null) $('depositTotal').value=p.deposit_amount; if(p.channel) setChannel(p.channel); }
+      renderOcr(ocrEl,p,kind); showDistance(loc); updateDiff();
     }catch(e){ ocrEl.innerHTML='<span class="pill warn">OCR ไม่พร้อม</span> กรอกตัวเลขเอง — '+e.message; }
   };
+  $(rmId).onclick = () => {
+    if(kind==='day_end') dayEndFile=null; else depositFile=null;
+    $(inputId).value=''; $(wrapId).classList.add('hide'); $(btnId).classList.remove('done'); $(ocrId).classList.add('hide');
+  };
 }
-function renderOcr(el, p, loc, kind){
-  if(p.available===false){
-    el.innerHTML='<span class="pill warn">ยังไม่ได้ติดตั้ง OCR</span> กรอกตัวเลขเอง';
-    return;
-  }
-  const amt = kind==='day_end' ? p.cash_sales : p.deposit_amount;
+function renderOcr(el,p,kind){
+  if(p.available===false){ el.innerHTML='<span class="pill warn">ยังไม่ได้ติดตั้ง OCR</span> กรอกตัวเลขเอง'; return; }
+  const amt = kind==='day_end'?p.cash_sales:p.deposit_amount;
   if(amt==null){ el.innerHTML='<span class="pill warn">อ่านเลขไม่ชัด</span> โปรดตรวจ/แก้ตัวเลข'; return; }
   el.innerHTML='<span class="pill ok">OCR อ่านได้</span> '+fmt(amt)+' บาท — โปรดตรวจความถูกต้อง';
 }
 function showDistance(loc){
-  if(!loc || loc.distance_m==null){ return; }
-  const el=$('locLine');
-  const km = loc.km!=null ? loc.km.toFixed(3) : '—';
-  const inRadius = loc.within_radius===1;
-  el.innerHTML = `📍 ห่างจากร้าน <b>${loc.distance_m} m</b> (${km} กม.) · รัศมี ${loc.radius_m} m ` +
-    (inRadius ? '<span class="pill ok">อยู่ที่ร้าน</span>' : '<span class="pill bad">นอกรัศมีร้าน</span>');
+  if(!loc||loc.distance_m==null) return;
+  const km=loc.km!=null?loc.km.toFixed(3):'—';
+  $('locLine').innerHTML=`📍 ห่างจากร้าน <b>${loc.distance_m} m</b> (${km} กม.) · รัศมี ${loc.radius_m} m `+
+    (loc.within_radius===1?'<span class="pill ok">อยู่ที่ร้าน</span>':'<span class="pill bad">นอกรัศมีร้าน</span>');
 }
-wireCapture('dayEndInput','dayEndCap','dayEndThumb','dayEndOcr','day_end');
-wireCapture('depositInput','depositCap','depositThumb','depositOcr','deposit');
+wireCapture('dayEndInput','dayEndBtn','dayEndThumbWrap','dayEndThumb','dayEndRm','dayEndOcr','day_end');
+wireCapture('depositInput','depositBtn','depositThumbWrap','depositThumb','depositRm','depositOcr','deposit');
 
 // ---------- diff ----------
 ['cashSales','depositTotal'].forEach(id=>$(id).addEventListener('input',updateDiff));
 function updateDiff(){
-  const c=parseFloat($('cashSales').value), d=parseFloat($('depositTotal').value);
-  const box=$('diffBox');
+  const c=parseFloat($('cashSales').value), d=parseFloat($('depositTotal').value), box=$('diffBox');
   if(isNaN(c)||isNaN(d)){ box.textContent='ส่วนต่าง: —'; box.style.background='var(--line)'; box.style.color='var(--ink)'; return; }
   const diff=Math.round((d-c)*100)/100;
   if(diff===0){ box.textContent='ส่วนต่าง: 0.00 — ✓ ตรงกัน'; box.style.background='var(--okbg)'; box.style.color='var(--ok)'; }
@@ -289,34 +349,33 @@ function updateDiff(){
 $('submitBtn').onclick = async () => {
   const msg=$('submitMsg'); msg.classList.add('hide');
   const c=parseFloat($('cashSales').value), d=parseFloat($('depositTotal').value);
-  if(isNaN(c)){ return showSubmit('กรอก Cash Sales (จาก Day End)', true); }
-  if(isNaN(d)){ return showSubmit('กรอกยอดนำฝาก', true); }
+  if(isNaN(d)) return showSubmit('กรอกยอดเงินฝาก',true);
+  if(isNaN(c)) return showSubmit('กรอก Cash Sales (จาก Day End)',true);
+  if(!getChannel()) return showSubmit('เลือกช่องทางฝาก',true);
   $('submitBtn').disabled=true; $('submitBtn').innerHTML='<span class="spin"></span> กำลังส่ง…';
+  const note = ($('note').value + (($('altAccount').value||'').trim()?(' | ฝากบัญชีอื่น: '+$('altAccount').value.trim()):'')).trim());
   const fd=new FormData();
-  if(dayEndFile) fd.append('day_end_file', dayEndFile);
-  if(depositFile) fd.append('deposit_file', depositFile);
-  fd.append('cash_sales', c); fd.append('deposit_total', d);
-  fd.append('deposit_channel', $('channel').value);
-  fd.append('depositor_name', $('depositorName').value.trim());
-  fd.append('depositor_phone', $('depositorPhone').value.trim());
-  fd.append('biz_date', $('bizDate').value);
-  fd.append('note', $('note').value);
-  // จำชื่อ/เบอร์ผู้ฝากไว้ในเครื่อง (กรอกครั้งเดียว ครั้งหน้าเติมให้)
-  try{
-    localStorage.setItem('payin_depositor_name', $('depositorName').value.trim());
-    localStorage.setItem('payin_depositor_phone', $('depositorPhone').value.trim());
-  }catch(e){}
+  if(dayEndFile) fd.append('day_end_file',dayEndFile);
+  if(depositFile) fd.append('deposit_file',depositFile);
+  fd.append('cash_sales',c); fd.append('deposit_total',d);
+  fd.append('deposit_channel',getChannel());
+  fd.append('depositor_name',$('depositorName').value.trim());
+  fd.append('depositor_phone',$('depositorPhone').value.trim());
+  fd.append('biz_date',$('bizDate').value);
+  fd.append('deposit_date',$('depositDate').value);
+  fd.append('note',note);
   if(GPS){ fd.append('lat',GPS.lat); fd.append('lng',GPS.lng); fd.append('accuracy',GPS.accuracy); }
-  fd.append('captured_at', new Date().toISOString().slice(0,19).replace('T',' '));
+  fd.append('captured_at',new Date().toISOString().slice(0,19).replace('T',' '));
+  try{ localStorage.setItem('payin_depositor_name',$('depositorName').value.trim());
+       localStorage.setItem('payin_depositor_phone',$('depositorPhone').value.trim()); }catch(e){}
   try{
     const r=await api('/api/submit',{method:'POST',body:fd});
-    showSubmit('✓ ส่งสำเร็จ #'+r.submission_id+' — ส่วนต่าง '+fmt(r.diff)+' บาท', false);
+    showSubmit('✓ ส่งแล้ว #'+r.submission_id+' — สถานะรอตรวจสอบ · ส่วนต่าง '+fmt(r.diff)+' บาท',false);
     loadHistory();
-  }catch(e){ showSubmit('ส่งไม่สำเร็จ: '+e.message, true); }
-  finally{ $('submitBtn').disabled=false; $('submitBtn').textContent='ส่งใบนำฝาก'; }
+  }catch(e){ showSubmit('ส่งไม่สำเร็จ: '+e.message,true); }
+  finally{ $('submitBtn').disabled=false; $('submitBtn').textContent='ส่งแจ้งยอดฝาก'; }
 };
-function showSubmit(m,isErr){ const el=$('submitMsg'); el.textContent=m;
-  el.className='msg '+(isErr?'err':'ok'); el.classList.remove('hide'); }
+function showSubmit(m,isErr){ const el=$('submitMsg'); el.textContent=m; el.className='msg '+(isErr?'err':'ok'); el.classList.remove('hide'); }
 
 // ---------- history ----------
 async function loadHistory(){
@@ -325,49 +384,53 @@ async function loadHistory(){
     if(!r.rows.length){ $('historyBox').textContent='ยังไม่มีประวัติ'; return; }
     let h='<table><tr><th>วันที่</th><th>นำฝาก</th><th>ส่วนต่าง</th><th>ที่ร้าน</th></tr>';
     for(const x of r.rows){
-      const diff = x.diff==null?'—':fmt(x.diff);
-      const dc = x.diff>0?'var(--warn)':(x.diff<0?'var(--bad)':'var(--ok)');
-      const at = x.within_radius==1?'✓':(x.within_radius==0?'✗':'—');
-      h+=`<tr><td>${x.biz_date||x.created_at||'—'}</td><td>${fmt(x.deposit_total)}</td>`+
-         `<td style="color:${dc}">${diff}</td><td>${at}</td></tr>`;
+      const diff=x.diff==null?'—':fmt(x.diff);
+      const dc=x.diff>0?'var(--warn)':(x.diff<0?'var(--bad)':'var(--ok)');
+      const at=x.within_radius==1?'✓':(x.within_radius==0?'✗':'—');
+      h+=`<tr><td>${x.biz_date||x.created_at||'—'}</td><td>${fmt(x.deposit_total)}</td><td style="color:${dc}">${diff}</td><td>${at}</td></tr>`;
     }
-    h+='</table>';
-    $('historyBox').innerHTML=h;
+    $('historyBox').innerHTML=h+'</table>';
   }catch(e){ $('historyBox').textContent='โหลดประวัติไม่ได้'; }
+}
+
+// ---------- bank card ----------
+const BANKS={
+  KBANK:{th:'ธนาคารกสิกรไทย',color:'#0a9f4f',label:'K'},
+  SCB:{th:'ธนาคารไทยพาณิชย์',color:'#4e2a84',label:'SCB'},
+  BBL:{th:'ธนาคารกรุงเทพ',color:'#1e4598',label:'BBL'},
+  TTB:{th:'ธนาคารทหารไทยธนชาต',color:'#103b7e',label:'ttb'},
+};
+function renderBank(bank){
+  if(bank && bank.bank_account){
+    const meta=BANKS[bank.bank_name]||{th:bank.bank_name||'ธนาคาร',color:'#9a9a9a',label:(bank.bank_name||'?').slice(0,3)};
+    $('bankLogo').style.background=meta.color; $('bankLogo').textContent=meta.label;
+    $('bankTh').textContent=meta.th + (bank.ar_code?(' · '+bank.ar_code):'');
+    $('bankAcct').textContent=bank.bank_account;
+    if(!getChannel()) setChannel('bank');
+  } else {
+    $('bankLogo').style.background='#b26a00'; $('bankLogo').textContent='?';
+    $('bankTh').innerHTML='<span class="pill warn">ไม่พบบัญชีประจำสาขา</span>';
+    $('bankAcct').textContent='— โปรดใช้บัญชีอื่น —';
+    $('bankHint').textContent='สาขานี้ยังไม่มีในทะเบียนบัญชี (Branch Master)';
+  }
 }
 
 // ---------- boot ----------
 async function boot(){
-  const me = await api('/api/me');
+  const me=await api('/api/me');
   if(!me.authenticated){ $('loginView').classList.remove('hide'); $('appView').classList.add('hide'); return; }
   $('loginView').classList.add('hide'); $('appView').classList.remove('hide');
   const s=me.shop;
-  $('shopName').textContent = s.shop_code+' · '+s.shop_name;
-  $('shopMeta').innerHTML = `DM: ${s.dm||'—'} · Head: ${s.head||'—'}`+
-    (me.ocr_available?'':' · <span class="pill warn">OCR ยังไม่พร้อม (กรอกเลขเอง)</span>');
-  SHOP_HASLOC=me.has_location; SHOP_RADIUS=me.radius_m;
-  if(!me.has_location){ $('locLine').innerHTML='📍 <span class="pill warn">ร้านนี้ยังไม่มีพิกัดอ้างอิง</span> (shop_location)'; }
-  // แสดงบัญชีที่ต้องนำฝาก (Branch Master)
-  const br=$('bankReminder');
-  if(me.bank && me.bank.bank_account){
-    const b=me.bank;
-    br.innerHTML=`🏦 ต้องฝากเข้า: <b>${b.bank_name} ${b.bank_account}</b>`+
-      (b.ar_code?` · <span style="opacity:.8">${b.ar_code}</span>`:'');
-    br.classList.remove('hide');
-    // เลือกช่องทาง = ธนาคาร ให้อัตโนมัติ (transfer type = Counter เข้าบัญชีธนาคาร)
-    if(!$('channel').value) $('channel').value='bank';
-  } else {
-    br.innerHTML='🏦 <span class="pill warn">ไม่พบบัญชีนำฝากของสาขานี้</span> (Branch Master)';
-    br.classList.remove('hide');
-  }
-  $('bizDate').value = new Date().toISOString().slice(0,10);
-  // เติมชื่อ/เบอร์ผู้ฝากที่เคยกรอกไว้ในเครื่อง
-  try{
-    $('depositorName').value = localStorage.getItem('payin_depositor_name') || '';
-    $('depositorPhone').value = localStorage.getItem('payin_depositor_phone') || '';
-  }catch(e){}
-  getGPS();
-  loadHistory();
+  $('shopCode').textContent=s.shop_code;
+  $('shopName').textContent=s.shop_name;
+  renderBank(me.bank);
+  if(!me.ocr_available){ $('dayEndOcr').classList.remove('hide'); $('dayEndOcr').innerHTML='<span class="pill warn">OCR ยังไม่พร้อม</span> กรอกเลขเอง'; }
+  const today=new Date().toISOString().slice(0,10);
+  $('depositDate').value=today; $('bizDate').value=today;
+  try{ $('depositorName').value=localStorage.getItem('payin_depositor_name')||'';
+       $('depositorPhone').value=localStorage.getItem('payin_depositor_phone')||''; }catch(e){}
+  if(!me.has_location){ $('locLine').innerHTML='📍 <span class="pill warn">ร้านนี้ยังไม่มีพิกัดอ้างอิง</span>'; }
+  getGPS(); loadHistory();
 }
 boot();
 </script>

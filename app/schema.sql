@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS payin_submission (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   shop_code      VARCHAR(20)     NOT NULL,
   biz_date       DATE            NULL        COMMENT 'วันที่ยอดขาย (Day End) ถ้าอ่านได้',
+  deposit_date   DATE            NULL        COMMENT 'วันที่นำฝากเงิน',
   cash_sales     DECIMAL(12,2)   NULL        COMMENT 'Cash Sales จาก Day End = เงินสดที่ต้องนำฝาก',
   deposit_total  DECIMAL(12,2)   NULL        COMMENT 'ยอดรวมจากใบนำฝาก',
   diff           DECIMAL(12,2)   NULL        COMMENT 'deposit_total - cash_sales (บวก=เกิน ลบ=ขาด)',

@@ -155,6 +155,7 @@ async def submit(
     depositor_name: str = Form(None),
     depositor_phone: str = Form(None),
     biz_date: str = Form(None),
+    deposit_date: str = Form(None),
     note: str = Form(None),
     lat: str = Form(None),
     lng: str = Form(None),
@@ -175,12 +176,12 @@ async def submit(
     # 1) insert submission
     sub_id = db.execute(
         """INSERT INTO payin_submission
-           (shop_code, biz_date, cash_sales, deposit_total, diff, deposit_channel,
+           (shop_code, biz_date, deposit_date, cash_sales, deposit_total, diff, deposit_channel,
             ar_code, bank_name, bank_account, offset_account,
             depositor_name, depositor_phone,
             gps_lat, gps_lng, distance_m, within_radius, status, note, created_by)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'submitted',%s,%s)""",
-        (shop_code, biz_date or None, cash, dep, diff, deposit_channel or None,
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'submitted',%s,%s)""",
+        (shop_code, biz_date or None, deposit_date or None, cash, dep, diff, deposit_channel or None,
          bank.get("ar_code"), bank.get("bank_name"), bank.get("bank_account"),
          bank.get("offset_account"),
          depositor_name or None, depositor_phone or None,
