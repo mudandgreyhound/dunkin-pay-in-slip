@@ -6,6 +6,9 @@
 """
 import os
 import re
+import hmac
+import hashlib
+import secrets
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 from . import db
@@ -78,6 +81,63 @@ def read_admin_token(token):
         return None
     try:
         data = _admin_serializer.loads(token, max_age=MAX_AGE)
+        return data.get("u")
+    except (BadSignature, SignatureExpired):
+        return None
+
+
+# ---------- รหัสผ่าน (pbkdf2_sha256, stdlib — ไม่ต้องลง bcrypt/passlib) ----------
+_PBKDF2_ITERS = 200_000
+
+
+def hash_password(password):
+    salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac("sha256", (password or "").encode("utf-8"),
+                             bytes.fromhex(salt), _PBKDF2_ITERS)
+    return f"pbkdf2_sha256${_PBKDF2_ITERS}${salt}${dk.hex()}"
+
+
+def verify_password(password, stored):
+    if not stored:
+        return False
+    try:
+        algo, iters, salt, h = stored.split("$")
+        if algo != "pbkdf2_sha256":
+            return False
+        dk = hashlib.pbkdf2_hmac("sha256", (password or "").encode("utf-8"),
+                                 bytes.fromhex(salt), int(iters))
+        return hmac.compare_digest(dk.hex(), h)
+    except Exception:
+        return False
+
+
+# ---------- DM (ผู้จัดการเขต — เห็นเฉพาะสาขาที่ดูแล) ----------
+DM_COOKIE = "payin_dm"
+_dm_serializer = URLSafeTimedSerializer(SECRET_KEY, salt="payin-dm")
+
+
+def authenticate_dm(username, password):
+    """คืน dict ข้อมูล DM ถ้าถูกต้องและ active, ไม่งั้น None"""
+    u = (username or "").strip()
+    if not u or not password:
+        return None
+    user = db.get_dm_user(u)
+    if not user or not user.get("active"):
+        return None
+    if not verify_password(password, user.get("password_hash")):
+        return None
+    return user
+
+
+def make_dm_token(username):
+    return _dm_serializer.dumps({"u": username})
+
+
+def read_dm_token(token):
+    if not token:
+        return None
+    try:
+        data = _dm_serializer.loads(token, max_age=MAX_AGE)
         return data.get("u")
     except (BadSignature, SignatureExpired):
         return None

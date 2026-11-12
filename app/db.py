@@ -105,3 +105,23 @@ def get_bank_master(account_code):
            FROM payin_bank_master WHERE account_code=%s""",
         (account_code,),
     )
+
+
+# ---------- DM users (ล็อกอินหน้า /review แบบเห็นเฉพาะสาขาที่ดูแล) ----------
+
+def get_dm_user(username):
+    return query_one(
+        """SELECT username, dm_name, display_name, password_hash, active
+           FROM payin_dm_user WHERE username=%s""",
+        (username,),
+    )
+
+
+def list_active_dms():
+    """รายชื่อ DM ที่ยัง active ใน dim_shop (สำหรับ dropdown ฝั่ง admin + seed บัญชี DM)"""
+    return [r["dm"] for r in query(
+        """SELECT DISTINCT dm FROM dim_shop
+           WHERE dm IS NOT NULL AND dm<>'' AND dm<>'Not Analysed'
+             AND dm NOT LIKE 'ยกเลิก%%'
+           ORDER BY dm""",
+    )]

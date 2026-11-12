@@ -76,6 +76,22 @@ CREATE TABLE IF NOT EXISTS payin_bank_master (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   COMMENT='pay-in-slip: รายการบัญชีกลางทั้งหมด (fallback ให้เลือกเมื่อสาขาไม่มีบัญชีผูก)';
 
+-- 2.6) DM users: บัญชีล็อกอินของ DM สำหรับหน้า /review
+--      แต่ละ DM เห็นเฉพาะสาขาที่ตัวเองดูแล (match dim_shop.dm = dm_name แบบตรงตัว)
+--      seed จาก dim_shop (เฉพาะ DM ที่ยัง active) ด้วย etl/manage_dm_users.py
+CREATE TABLE IF NOT EXISTS payin_dm_user (
+  username      VARCHAR(60)  NOT NULL COMMENT 'ชื่อผู้ใช้สำหรับล็อกอิน',
+  dm_name       VARCHAR(100) NOT NULL COMMENT 'ชื่อ DM ตรงกับ dim_shop.dm',
+  display_name  VARCHAR(100) NULL     COMMENT 'ชื่อที่แสดงบนหน้าจอ',
+  password_hash VARCHAR(255) NOT NULL COMMENT 'pbkdf2_sha256$iters$salt$hash',
+  active        TINYINT      NOT NULL DEFAULT 1 COMMENT '1=ใช้งาน, 0=ระงับ',
+  created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (username),
+  KEY idx_dm (dm_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  COMMENT='pay-in-slip: บัญชีล็อกอินของ DM (เห็นเฉพาะสาขาที่ดูแล)';
+
 -- 3) Branch Master: บัญชีธนาคารที่แต่ละสาขาต้องนำฝาก (โหลดจาก Branch Master.csv)
 CREATE TABLE IF NOT EXISTS payin_branch_bank (
   shop_code      VARCHAR(20)  NOT NULL,
