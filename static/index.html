@@ -83,6 +83,18 @@
        border:2px solid var(--card);font-size:13px;line-height:1;cursor:pointer}
   .ocrnote{font-size:12px;margin-top:8px}
 
+  /* ใบนำฝากหลายใบ */
+  .slip{display:flex;gap:10px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:12px;
+       background:var(--field);margin-bottom:8px}
+  .slip img{width:54px;height:66px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex:0 0 auto}
+  .slip .sbody{flex:1;min-width:0}
+  .slip .sbody .shd{font-size:12px;font-weight:800;margin-bottom:4px;display:flex;justify-content:space-between;gap:6px}
+  .slip .sbody input{font-size:17px;font-weight:800;padding:8px 10px}
+  .slip .srm{flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:#333;color:#fff;border:0;font-size:14px;cursor:pointer}
+  .slip.over{border-color:var(--bad)}
+  .sliptot{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;font-weight:800}
+  .sliptot .v{font-size:22px}
+
   .pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800}
   .pill.ok{background:var(--okbg);color:var(--ok)}.pill.bad{background:var(--badbg);color:var(--bad)}
   .pill.warn{background:var(--warnbg);color:var(--warn)}
@@ -186,23 +198,22 @@
       </div>
     </div>
 
-    <!-- ยอดเงินฝาก + รูปใบนำฝาก -->
+    <!-- รูปใบนำฝาก (แนบได้หลายใบ) + ยอดรวมอัตโนมัติ -->
     <div class="card">
-      <label class="fl">ยอดเงินฝาก (บาท) <span class="req">*</span></label>
+      <label class="fl">แนบรูปใบนำฝาก <span class="req">*</span>
+        <span class="sub" id="slipCountNote"></span></label>
+      <div class="sub" style="margin-bottom:8px">แนบได้หลายใบ · 7‑Eleven ฝากได้ไม่เกิน 10,000 บาท/ใบ (เกินให้แยกใบ)</div>
+      <div id="slipList"></div>
+      <label for="depositInput" class="attachbtn" id="depositBtn" style="width:100%">
+        <div class="cam">📷</div><b>เพิ่มรูปใบนำฝาก</b><small>ถ่าย/เลือกได้ทีละหลายใบ</small>
+      </label>
+      <input id="depositInput" type="file" accept="image/*" capture="environment" multiple class="hide">
+      <div id="depositWarn" class="ocrnote hide"></div>
+
+      <label class="fl" style="margin-top:14px">ยอดเงินฝากรวม (บาท) <span class="req">*</span></label>
       <div class="field-ic amount"><span class="ic">🪙</span>
         <input id="depositTotal" type="number" inputmode="decimal" step="0.01" placeholder="0.00"></div>
-
-      <label class="fl" style="margin-top:14px">แนบรูปใบนำฝาก <span class="req">*</span></label>
-      <div class="attach">
-        <label for="depositInput" class="attachbtn" id="depositBtn">
-          <div class="cam">📷</div><b>ถ่ายรูป / เลือกรูป</b><small>ใบนำฝาก (ธนาคาร/7‑11/Lotus's)</small>
-        </label>
-        <input id="depositInput" type="file" accept="image/*" capture="environment" class="hide">
-        <div class="thumbwrap hide" id="depositThumbWrap">
-          <img id="depositThumb" alt=""><div class="rm" id="depositRm">✕</div>
-        </div>
-      </div>
-      <div id="depositOcr" class="ocrnote hide"></div>
+      <div class="sub" id="depositTotalHint" style="margin-top:4px">รวมอัตโนมัติจากทุกใบ — แก้ได้ถ้าต้องการ</div>
     </div>
 
     <!-- ผู้ฝาก -->
@@ -254,7 +265,9 @@
 
 <script>
 const $ = id => document.getElementById(id);
-let GPS=null, dayEndFile=null, depositFile=null;
+let GPS=null, dayEndFile=null;
+let depositSlips=[], slipSeq=0;   // ใบนำฝากหลายใบ: {id,file,amount}
+const SEVEN_MAX=10000;            // 7-Eleven ฝากได้ไม่เกิน 10,000 บาท/ใบ
 
 async function api(path, opts={}){
   const r = await fetch(path, {credentials:'same-origin', ...opts});
@@ -357,7 +370,84 @@ function showDistance(loc){
     (loc.within_radius===1?'<span class="pill ok">อยู่ที่ร้าน</span>':'<span class="pill bad">นอกรัศมีร้าน</span>');
 }
 wireCapture('dayEndInput','dayEndBtn','dayEndThumbWrap','dayEndThumb','dayEndRm','dayEndOcr','day_end');
-wireCapture('depositInput','depositBtn','depositThumbWrap','depositThumb','depositRm','depositOcr','deposit');
+
+// ---------- ใบนำฝากหลายใบ (7-11 จำกัด 10,000/ใบ) ----------
+$('depositInput').onchange = async (ev) => {
+  const files = Array.from(ev.target.files||[]);
+  ev.target.value='';                     // เคลียร์ ให้เลือกไฟล์เดิมซ้ำได้
+  for(const raw of files){ await addSlip(raw); }
+};
+async function addSlip(raw){
+  if(!raw) return;
+  const file=await resizeImage(raw);
+  const slip={ id:(++slipSeq), file, amount:null, url:URL.createObjectURL(file) };
+  depositSlips.push(slip);
+  renderSlips(); recomputeTotal();
+  const el=document.querySelector(`.slip[data-id="${slip.id}"] .socr`);
+  if(el) el.innerHTML='<span class="spin" style="border-color:#8884;border-top-color:var(--dd)"></span> อ่าน OCR…';
+  const fd=new FormData(); fd.append('file',file); fd.append('kind','deposit');
+  if(GPS){ fd.append('lat',GPS.lat); fd.append('lng',GPS.lng); }
+  try{
+    const r=await api('/api/ocr',{method:'POST',body:fd}); const p=r.parsed||{};
+    if(p.deposit_amount!=null && slip.amount==null){
+      slip.amount=p.deposit_amount;
+      const inp=document.querySelector(`.slip[data-id="${slip.id}"] .slipamt`);
+      if(inp) inp.value=p.deposit_amount;
+    }
+    if(p.channel && !getChannel()) setChannel(p.channel);
+    if(r.location) showDistance(r.location);
+    if(el) el.innerHTML = p.deposit_amount!=null
+        ? '<span class="pill ok">OCR อ่านได้</span>'
+        : '<span class="pill warn">อ่านเลขไม่ชัด</span> กรอกเอง';
+  }catch(e){ if(el) el.innerHTML='<span class="pill warn">OCR ไม่พร้อม</span> กรอกยอดเอง'; }
+  recomputeTotal();
+}
+function removeSlip(id){
+  const s=depositSlips.find(x=>x.id===id); if(s&&s.url) URL.revokeObjectURL(s.url);
+  depositSlips=depositSlips.filter(x=>x.id!==id);
+  renderSlips(); recomputeTotal();
+}
+function renderSlips(){
+  const box=$('slipList'); box.innerHTML='';
+  depositSlips.forEach((s,i)=>{
+    const d=document.createElement('div'); d.className='slip'; d.dataset.id=s.id;
+    d.innerHTML=
+      `<img src="${s.url}" alt="">
+       <div class="sbody">
+         <div class="shd"><span>ใบที่ ${i+1}</span><span class="socr muted"></span></div>
+         <input class="slipamt" type="number" inputmode="decimal" step="0.01" placeholder="ยอดใบนี้ (บาท)" value="${s.amount!=null?s.amount:''}">
+       </div>
+       <button class="srm" type="button" title="ลบใบนี้">✕</button>`;
+    d.querySelector('.slipamt').addEventListener('input',e=>{
+      s.amount = (e.target.value===''?null:parseFloat(e.target.value)); recomputeTotal();
+    });
+    d.querySelector('.srm').onclick=()=>removeSlip(s.id);
+    box.appendChild(d);
+  });
+}
+function recomputeTotal(){
+  const amts=depositSlips.map(s=>s.amount).filter(v=>v!=null && !isNaN(v));
+  const sum=amts.reduce((a,b)=>a+b,0);
+  $('slipCountNote').textContent = depositSlips.length?`· ${depositSlips.length} ใบ`:'';
+  if(depositSlips.length) $('depositTotal').value = Math.round(sum*100)/100;
+  $('depositTotalHint').textContent = depositSlips.length
+     ? `รวมอัตโนมัติจาก ${amts.length}/${depositSlips.length} ใบ — แก้ได้ถ้าต้องการ`
+     : 'รวมอัตโนมัติจากทุกใบ — แก้ได้ถ้าต้องการ';
+  checkSevenWarn(); updateDiff();
+}
+function checkSevenWarn(){
+  const w=$('depositWarn');
+  const over=depositSlips.filter(s=>s.amount!=null && s.amount>SEVEN_MAX);
+  depositSlips.forEach(s=>{
+    const el=document.querySelector(`.slip[data-id="${s.id}"]`);
+    if(el) el.classList.toggle('over', s.amount!=null && s.amount>SEVEN_MAX);
+  });
+  if(getChannel()==='seven' && over.length){
+    w.classList.remove('hide');
+    w.innerHTML=`<span class="pill bad">เกินลิมิต 7‑Eleven</span> มี ${over.length} ใบเกิน 10,000 บาท — ต้องแยกใบให้ไม่เกินใบละ 10,000`;
+  }else{ w.classList.add('hide'); w.innerHTML=''; }
+}
+document.querySelectorAll('input[name=chan]').forEach(r=>r.addEventListener('change',checkSevenWarn));
 
 // ---------- diff ----------
 ['cashSales','depositTotal'].forEach(id=>$(id).addEventListener('input',updateDiff));
@@ -374,9 +464,16 @@ function updateDiff(){
 $('submitBtn').onclick = async () => {
   const msg=$('submitMsg'); msg.classList.add('hide');
   const c=parseFloat($('cashSales').value), d=parseFloat($('depositTotal').value);
+  if(!depositSlips.length) return showSubmit('แนบรูปใบนำฝากอย่างน้อย 1 ใบ',true);
+  if(depositSlips.some(s=>s.amount==null||isNaN(s.amount))) return showSubmit('กรอกยอดเงินให้ครบทุกใบนำฝาก',true);
   if(isNaN(d)) return showSubmit('กรอกยอดเงินฝาก',true);
   if(isNaN(c)) return showSubmit('กรอก Cash Sales (จาก Day End)',true);
   if(!getChannel()) return showSubmit('เลือกช่องทางฝาก',true);
+  // 7-Eleven: เตือนถ้ามีใบเกิน 10,000 (รับได้ไม่เกินใบละ 10,000)
+  const over=depositSlips.filter(s=>s.amount>SEVEN_MAX);
+  if(getChannel()==='seven' && over.length){
+    if(!confirm(`มีใบนำฝาก ${over.length} ใบเกิน 10,000 บาท\n7‑Eleven รับฝากไม่เกิน 10,000 บาท/ใบ ควรแยกใบ\n\nยืนยันส่งต่อไปหรือไม่?`)) return;
+  }
   // เตือนถ้าสาขานี้แจ้งยอด "วันที่ยอดขาย" นี้ไปแล้ว (แจ้งซ้ำ = แก้ไข)
   if($('bizDate').value){
     try{
@@ -395,7 +492,10 @@ $('submitBtn').onclick = async () => {
   const fd=new FormData();
   if(altCode) fd.append('bank_account_code',altCode);
   if(dayEndFile) fd.append('day_end_file',dayEndFile);
-  if(depositFile) fd.append('deposit_file',depositFile);
+  depositSlips.forEach(s=>{
+    fd.append('deposit_files', s.file);
+    fd.append('deposit_amounts', s.amount!=null ? s.amount : '');
+  });
   fd.append('cash_sales',c); fd.append('deposit_total',d);
   fd.append('deposit_channel',getChannel());
   fd.append('depositor_name',$('depositorName').value.trim());
@@ -411,7 +511,8 @@ $('submitBtn').onclick = async () => {
     const r=await api('/api/submit',{method:'POST',body:fd});
     const head = r.revision>1 ? ('✓ แก้ไขครั้งที่ '+r.revision+' (#'+r.submission_id+') — ใช้ยอดนี้แทนอันเดิม')
                               : ('✓ ส่งแล้ว #'+r.submission_id+' — สถานะรอตรวจสอบ');
-    showSubmit(head+' · ส่วนต่าง '+fmt(r.diff)+' บาท',false);
+    const nslip=r.deposit_slips||depositSlips.length;
+    showSubmit(head+' · ส่วนต่าง '+fmt(r.diff)+' บาท · ใบนำฝาก '+nslip+' ใบ',false);
     loadHistory();
   }catch(e){ showSubmit('ส่งไม่สำเร็จ: '+e.message,true); }
   finally{ $('submitBtn').disabled=false; $('submitBtn').textContent='ส่งแจ้งยอดฝาก'; }

@@ -7,6 +7,7 @@ OCR ด้วย Tesseract (local) + ตัว parse ฟิลด์เงิน
 ถ้าไม่มี tesseract ติดตั้ง: คืน available=False เพื่อให้ผู้ใช้กรอกเลขเอง
 (ติดตั้ง: sudo apt install -y tesseract-ocr tesseract-ocr-tha)
 """
+import os
 import re
 import io
 import shutil
@@ -87,6 +88,12 @@ def _preprocess(img):
     return g
 
 
+# เวลาสูงสุดต่อ 1 ครั้งที่ยอมให้ tesseract ทำงาน (วินาที)
+# กันกรณีรูปผิดปกติ/ใหญ่มากทำให้ tesseract ค้างไม่รู้จบ -> บล็อกทั้งเซิร์ฟเวอร์
+# pytesseract จะฆ่า process ทิ้งแล้ว raise RuntimeError เมื่อเกินเวลานี้
+OCR_TIMEOUT = int(os.getenv("OCR_TIMEOUT", "25"))
+
+
 def run_ocr(image_bytes, lang="tha+eng"):
     """คืนข้อความดิบจากรูป (หรือ '' ถ้าทำไม่ได้)"""
     if not available():
@@ -94,13 +101,14 @@ def run_ocr(image_bytes, lang="tha+eng"):
     try:
         img = Image.open(io.BytesIO(image_bytes))
         img = _preprocess(img)
-        return pytesseract.image_to_string(img, lang=lang)
+        return pytesseract.image_to_string(img, lang=lang, timeout=OCR_TIMEOUT)
     except Exception:
         # ถ้าไม่มี language pack tha ให้ลอง eng อย่างเดียว
+        # (ครอบคลุม timeout ด้วย: ถ้า tha ค้างจนถูกฆ่า ลอง eng อย่างเดียวซึ่งเบากว่า)
         try:
             img = Image.open(io.BytesIO(image_bytes))
             img = _preprocess(img)
-            return pytesseract.image_to_string(img, lang="eng")
+            return pytesseract.image_to_string(img, lang="eng", timeout=OCR_TIMEOUT)
         except Exception:
             return ""
 
