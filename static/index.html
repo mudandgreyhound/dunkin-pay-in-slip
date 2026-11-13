@@ -281,7 +281,7 @@ function localDT(){ const d=new Date(), p=n=>String(n).padStart(2,'0');
 
 // ---------- channel radios ----------
 function getChannel(){ const c=document.querySelector('input[name=chan]:checked'); return c?c.value:''; }
-function setChannel(v){ const el=document.querySelector(`input[name=chan][value="${v}"]`); if(el) el.checked=true; }
+function setChannel(v){ const el=document.querySelector(`input[name=chan][value="${v}"]`); if(el){ el.checked=true; if(typeof applyChannelLock==='function') applyChannelLock(); } }
 
 // ---------- GPS ----------
 function getGPS(){
@@ -447,7 +447,7 @@ function checkSevenWarn(){
     w.innerHTML=`<span class="pill bad">เกินลิมิต 7‑Eleven</span> มี ${over.length} ใบเกิน 10,000 บาท — ต้องแยกใบให้ไม่เกินใบละ 10,000`;
   }else{ w.classList.add('hide'); w.innerHTML=''; }
 }
-document.querySelectorAll('input[name=chan]').forEach(r=>r.addEventListener('change',checkSevenWarn));
+document.querySelectorAll('input[name=chan]').forEach(r=>r.addEventListener('change',()=>{ checkSevenWarn(); applyChannelLock(); }));
 
 // ---------- diff ----------
 ['cashSales','depositTotal'].forEach(id=>$(id).addEventListener('input',updateDiff));
@@ -543,6 +543,36 @@ const BANKS={
   TTB:{th:'ธนาคารทหารไทยธนชาต',color:'#103b7e',label:'ttb'},
 };
 let BANK_FIXED=false;   // true = สาขามีบัญชีผูกแน่นอน
+let ME_BANK=null;       // บัญชีประจำสาขาจาก /api/me (ไว้คืนค่าเวลายกเลิกล็อก Lotus's)
+
+// Lotus's: ฝากผ่าน Lotus's ต้องเข้าบัญชี SCB 234-201624-8 เท่านั้น -> ล็อกบัญชีนี้
+const LOTUS_LOCK_CODE='SA-SCB01';
+let lotusLocked=false;
+function applyChannelLock(){
+  const sel=$('altAccount');
+  if(getChannel()==='cpaxtra'){
+    lotusLocked=true;
+    // กันกรณี option ยังไม่ถูกเติม -> สร้างเองให้เลือกได้แน่
+    if(!Array.from(sel.options).some(o=>o.value===LOTUS_LOCK_CODE)){
+      const o=document.createElement('option'); o.value=LOTUS_LOCK_CODE;
+      o.textContent='SCB · 234-201624-8'; sel.appendChild(o);
+    }
+    sel.value=LOTUS_LOCK_CODE; sel.disabled=true;
+    $('altBox').classList.remove('hide');
+    $('altToggle').classList.add('hide');
+    const meta=BANKS.SCB;
+    $('bankLogo').style.background=meta.color; $('bankLogo').textContent=meta.label;
+    $('bankTh').innerHTML='ธนาคารไทยพาณิชย์ <span class="pill warn">ล็อกบัญชี Lotus\'s</span>';
+    $('bankAcct').textContent='234-201624-8';
+    $('bankHint').textContent='ฝากผ่าน Lotus\'s ต้องเข้าบัญชี SCB 234-201624-8 เท่านั้น';
+  }else if(lotusLocked){
+    // เพิ่งสลับออกจาก Lotus's -> คืนสภาพเดิมตามบัญชีสาขา
+    lotusLocked=false;
+    sel.disabled=false; sel.value='';
+    renderBank(ME_BANK);
+    if(BANK_FIXED) $('altBox').classList.add('hide');
+  }
+}
 async function loadBankMaster(){
   try{
     const r=await api('/api/bank-master');
@@ -586,7 +616,9 @@ async function boot(){
   $('shopCode').textContent=s.shop_code;
   $('shopName').textContent=s.shop_name;
   await loadBankMaster();
+  ME_BANK=me.bank;
   renderBank(me.bank);
+  applyChannelLock();   // เผื่อช่องทางถูกตั้งเป็น Lotus's อยู่ก่อน -> ล็อกบัญชีทันที
   if(!me.ocr_available){ $('dayEndOcr').classList.remove('hide'); $('dayEndOcr').innerHTML='<span class="pill warn">OCR ยังไม่พร้อม</span> กรอกเลขเอง'; }
   const today=new Date().toISOString().slice(0,10);
   $('depositDate').value=today; $('bizDate').value=today;
